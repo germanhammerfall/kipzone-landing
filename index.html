@@ -18,6 +18,7 @@
       <a href="#como-funciona">Cómo funciona</a>
       <a href="#arenas">Arenas</a>
       <a href="#eventos">Eventos</a>
+      <a href="#juego">Juego</a>
       <a href="#descargar">Descargar</a>
     </nav>
   </header>
@@ -31,7 +32,7 @@
       <div class="hero-overlay" aria-hidden="true"></div>
 
       <div class="hero-content">
-        <div class="hero-copy">
+        <div class="hero-copy" data-parallax="copy">
           <p class="eyebrow reveal-up">Runner territory game</p>
           <h1 class="hero-title reveal-up"><span>CONQUISTA</span><span>TU CIUDAD</span><span>CORRIENDO</span></h1>
           <p class="hero-text reveal-up">Captura territorios, compite en arenas locales y crea eventos públicos para correr con tu comunidad.</p>
@@ -41,7 +42,7 @@
           </div>
         </div>
 
-        <div class="hero-device" aria-label="Vista previa de KipZone">
+        <div class="hero-device" aria-label="Vista previa de KipZone" data-parallax="phone">
           <div class="phone-shell">
             <img src="assets/app-screen-1.png" alt="Pantalla de KipZone mostrando territorios y arenas" data-asset-fallback>
           </div>
@@ -49,13 +50,51 @@
       </div>
     </section>
 
-    <section class="section reveal" id="como-funciona">
-      <div class="section-heading"><p class="eyebrow">Cómo funciona</p><h2>Del running al territorio.</h2></div>
-      <div class="step-grid">
-        <article><span>01</span><h3>Corre y registra tu ruta</h3><p>Inicia una actividad desde KipZone y sal a correr por tu ciudad. Cada kilómetro cuenta para tu progreso y tu presencia local.</p></article>
-        <article><span>02</span><h3>Tu recorrido crea territorio</h3><p>Cuando completas rutas válidas, KipZone transforma tu movimiento en presencia visual sobre el mapa y te permite conquistar nuevas zonas.</p></article>
-        <article><span>03</span><h3>Compite por zonas y arenas</h3><p>Sube en el ranking de tu zona geográfica y participa en arenas locales donde el progreso es acumulativo.</p></article>
-        <article><span>04</span><h3>Crea eventos públicos</h3><p>Organiza corridas abiertas y conecta con runners de tu barrio gracias a eventos públicos estilo meetup.</p></article>
+    <section class="section flow-section reveal" id="como-funciona" data-flow>
+      <div class="section-heading">
+        <p class="eyebrow">Cómo funciona</p>
+        <h2>Del running al territorio.</h2>
+      </div>
+
+      <div class="flow-layout">
+        <div class="flow-steps" aria-label="Pipeline de KipZone">
+          <button class="flow-step is-active" type="button" data-flow-step="0">
+            <span>01</span>
+            <h3>Corre y registra tu ruta</h3>
+            <p>Inicia una actividad desde KipZone y sal a correr por tu ciudad. Cada kilómetro cuenta para tu progreso y tu presencia local.</p>
+          </button>
+          <button class="flow-step" type="button" data-flow-step="1">
+            <span>02</span>
+            <h3>Tu recorrido crea territorio</h3>
+            <p>Cuando completas rutas válidas, KipZone transforma tu movimiento en presencia visual sobre el mapa y te permite conquistar nuevas zonas.</p>
+          </button>
+          <button class="flow-step" type="button" data-flow-step="2">
+            <span>03</span>
+            <h3>Compite por zonas y arenas</h3>
+            <p>Sube en el ranking de tu zona geográfica y participa en arenas locales donde el progreso es acumulativo.</p>
+          </button>
+          <button class="flow-step" type="button" data-flow-step="3">
+            <span>04</span>
+            <h3>Crea eventos públicos</h3>
+            <p>Organiza corridas abiertas y conecta con runners de tu barrio gracias a eventos públicos estilo meetup.</p>
+          </button>
+        </div>
+
+        <aside class="flow-preview" data-flow-preview data-state="route" aria-live="polite">
+          <p class="eyebrow" data-flow-kicker>Actividad</p>
+          <h3 data-flow-title>Corre y registra tu ruta</h3>
+          <p data-flow-copy>Tu entrenamiento empieza como una salida normal, pero KipZone lo convierte en progreso dentro de tu ciudad.</p>
+          <div class="flow-map" aria-hidden="true">
+            <div class="city-grid"></div>
+            <span class="route-line route-one"></span>
+            <span class="route-line route-two"></span>
+            <span class="territory-shape"></span>
+            <span class="runner-dot"></span>
+            <span class="arena-ring"></span>
+            <span class="arena-pin"></span>
+            <span class="mini-event-card">Evento público<br><strong>5K barrio</strong></span>
+          </div>
+        </aside>
       </div>
     </section>
 
@@ -74,9 +113,37 @@
       <div class="event-strip"><article><time>Vie 20:30</time><span>5K nocturno</span></article><article><time>Sáb 09:00</time><span>Meetup en plaza</span></article><article><time>Dom 08:00</time><span>Long run de barrio</span></article></div>
     </section>
 
-    <section class="section reveal" id="screenshots">
+    <section class="section carousel-section reveal" id="juego" data-carousel>
       <div class="section-heading"><p class="eyebrow">Juego runner</p><h2>Domina el juego runner de tu ciudad.</h2></div>
-      <div class="screen-grid"><article>Captura territorios</article><article>Arenas locales</article><article>Ranking por zona</article></div>
+      <div class="carousel-shell">
+        <div class="carousel-track" data-carousel-track>
+          <article class="carousel-card">
+            <span>01</span>
+            <h3>Captura territorios</h3>
+            <p>Transforma tus rutas en presencia visual. Tu ciudad deja de ser solo un mapa y se convierte en un tablero runner.</p>
+          </article>
+          <article class="carousel-card">
+            <span>02</span>
+            <h3>Arenas locales</h3>
+            <p>Compite por lugares reconocibles: plazas, parques, estadios y zonas deportivas donde la constancia pesa más que una sola corrida.</p>
+          </article>
+          <article class="carousel-card">
+            <span>03</span>
+            <h3>Ranking por zona</h3>
+            <p>Destaca en tu barrio, tu comuna y tus zonas frecuentes. KipZone convierte el progreso local en competencia visible.</p>
+          </article>
+          <article class="carousel-card">
+            <span>04</span>
+            <h3>Eventos públicos</h3>
+            <p>Crea quedadas, entrenamientos y retos abiertos para correr con más gente cerca de ti.</p>
+          </article>
+        </div>
+      </div>
+      <div class="carousel-controls" aria-label="Controles del carrusel">
+        <button type="button" data-carousel-prev aria-label="Anterior">←</button>
+        <div class="carousel-dots" data-carousel-dots aria-label="Indicadores del carrusel"></div>
+        <button type="button" data-carousel-next aria-label="Siguiente">→</button>
+      </div>
     </section>
 
     <section class="final-cta reveal" id="descargar">
