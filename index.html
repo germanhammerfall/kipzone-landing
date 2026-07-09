@@ -10,11 +10,10 @@
 <body>
   <header class="site-header" data-header>
     <a class="brand" href="#hero" aria-label="KipZone inicio">
-      <!-- Reemplaza assets/logo.png por el logo final de KipZone. -->
       <img src="assets/logo.png" alt="KipZone" class="brand-logo" data-asset-fallback>
       <span class="brand-wordmark">KipZone</span>
     </a>
-    <button class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" data-menu-toggle><span></span><span></span></button>
+    <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" data-menu-toggle><span></span><span></span></button>
     <nav class="site-nav" data-nav>
       <a href="#como-funciona">Cómo funciona</a>
       <a href="#arenas">Arenas</a>
@@ -25,30 +24,27 @@
 
   <main>
     <section class="hero" id="hero">
-      <!-- Reemplaza assets/hero-map.mp4 por un video real de mapa/recorrido urbano. -->
       <video class="hero-video" autoplay muted loop playsinline preload="metadata" data-hero-video>
         <source src="assets/hero-map.mp4" type="video/mp4">
       </video>
       <div class="hero-fallback" aria-hidden="true"></div>
       <div class="hero-overlay" aria-hidden="true"></div>
+
       <div class="hero-content">
         <div class="hero-copy">
           <p class="eyebrow reveal-up">Runner territory game</p>
           <h1 class="hero-title reveal-up"><span>CONQUISTA</span><span>TU CIUDAD</span><span>CORRIENDO</span></h1>
-          <p class="hero-text reveal-up">Crea territorios, compite en arenas locales y descubre eventos runner cerca de ti.</p>
+          <p class="hero-text reveal-up">Captura territorios, compite en arenas locales y crea eventos públicos para correr con tu comunidad.</p>
           <div class="hero-actions reveal-up">
             <a class="button button-primary" href="#descargar">Descargar en Google Play</a>
-            <a class="button button-ghost" href="#como-funciona">Ver cómo funciona</a>
+            <span class="button button-soon" aria-disabled="true">Próximamente en App Store</span>
           </div>
         </div>
+
         <div class="hero-device" aria-label="Vista previa de KipZone">
           <div class="phone-shell">
-            <!-- Reemplaza assets/app-screen-1.png por una captura real de la app. -->
             <img src="assets/app-screen-1.png" alt="Pantalla de KipZone mostrando territorios y arenas" data-asset-fallback>
-            <div class="screen-fallback"><span>KIPZONE LIVE</span><strong>Zona Centro</strong><small>3 territorios activos</small><div class="route-line"></div><div class="screen-stats"><b>4.8 km</b><b>31 pts</b></div></div>
           </div>
-          <div class="floating-badge">Arena activa cerca de ti</div>
-          <aside class="ranking-panel" aria-label="Ranking por zona"><p>Ranking por zona</p><ol><li><span>Matías</span><strong>42 pts</strong></li><li><span>Elena</span><strong>38 pts</strong></li><li><span>Tú</span><strong>31 pts</strong></li></ol></aside>
         </div>
       </div>
     </section>
@@ -82,7 +78,15 @@
       <div class="screen-grid"><article>Mapa vivo</article><article>Arenas activas</article><article>Ranking por zona</article></div>
     </section>
 
-    <section class="final-cta reveal" id="descargar"><p class="eyebrow">Descargar</p><h2>Tu próxima ruta puede conquistar una zona.</h2><a class="button button-primary" href="#">Descargar en Google Play</a></section>
+    <section class="final-cta reveal" id="descargar">
+      <p class="eyebrow">Descargar</p>
+      <h2>Empieza a conquistar tu ciudad</h2>
+      <p class="final-copy">Descarga KipZone y conviértete en parte del juego runner local.</p>
+      <div class="download-actions">
+        <a class="button button-primary" href="#">Descargar en Google Play</a>
+        <span class="button button-soon" aria-disabled="true">Próximamente en App Store</span>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer"><a href="/privacy/">Privacidad</a><a href="/terms/">Términos</a><a href="mailto:gcarrasco80@gmail.com">Contacto</a></footer>
