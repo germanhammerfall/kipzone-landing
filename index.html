@@ -53,46 +53,45 @@
     <section class="section flow-section reveal" id="como-funciona" data-flow>
       <div class="section-heading">
         <p class="eyebrow">Cómo funciona</p>
-        <h2>Del running al territorio.</h2>
+        <h2>Convierte tu ruta en territorio.</h2>
       </div>
 
       <div class="flow-layout">
         <div class="flow-steps" aria-label="Pipeline de KipZone">
           <button class="flow-step is-active" type="button" data-flow-step="0">
             <span>01</span>
-            <h3>Corre y registra tu ruta</h3>
-            <p>Inicia una actividad desde KipZone y sal a correr por tu ciudad. Cada kilómetro cuenta para tu progreso y tu presencia local.</p>
+            <h3>Inicia tu actividad</h3>
+            <p>Abre KipZone, presiona Run y comienza a correr. Tu recorrido empieza a registrarse sobre el mapa real.</p>
           </button>
           <button class="flow-step" type="button" data-flow-step="1">
             <span>02</span>
-            <h3>Tu recorrido crea territorio</h3>
-            <p>Cuando completas rutas válidas, KipZone transforma tu movimiento en presencia visual sobre el mapa y te permite conquistar nuevas zonas.</p>
+            <h3>Cierra una ruta válida</h3>
+            <p>Corre un circuito y vuelve cerca del punto de partida. KipZone detecta el cierre de la ruta.</p>
           </button>
           <button class="flow-step" type="button" data-flow-step="2">
             <span>03</span>
-            <h3>Compite por zonas y arenas</h3>
-            <p>Sube en el ranking de tu zona geográfica y participa en arenas locales donde el progreso es acumulativo.</p>
+            <h3>KipZone crea tu territorio</h3>
+            <p>El recorrido se transforma en presencia visual sobre el mapa y crea una zona conquistada.</p>
           </button>
           <button class="flow-step" type="button" data-flow-step="3">
             <span>04</span>
-            <h3>Crea eventos públicos</h3>
-            <p>Organiza corridas abiertas y conecta con runners de tu barrio gracias a eventos públicos estilo meetup.</p>
+            <h3>Compite por la ciudad</h3>
+            <p>Defiende tus zonas, sube en el ranking local y compite por arenas reconocibles de tu ciudad.</p>
           </button>
         </div>
 
-        <aside class="flow-preview" data-flow-preview data-state="route" aria-live="polite">
-          <p class="eyebrow" data-flow-kicker>Actividad</p>
-          <h3 data-flow-title>Corre y registra tu ruta</h3>
-          <p data-flow-copy>Tu entrenamiento empieza como una salida normal, pero KipZone lo convierte en progreso dentro de tu ciudad.</p>
-          <div class="flow-map" aria-hidden="true">
-            <div class="city-grid"></div>
-            <span class="route-line route-one"></span>
-            <span class="route-line route-two"></span>
-            <span class="territory-shape"></span>
-            <span class="runner-dot"></span>
-            <span class="arena-ring"></span>
-            <span class="arena-pin"></span>
-            <span class="mini-event-card">Evento público<br><strong>5K barrio</strong></span>
+        <aside class="flow-preview flow-video-panel" data-flow-preview data-state="route" aria-live="polite">
+          <p class="eyebrow" data-flow-kicker>Territorio</p>
+          <h3 data-flow-title>De ruta a territorio</h3>
+          <p data-flow-copy>Un recorrido válido se convierte en una zona visible dentro del mapa.</p>
+          <div class="territory-video-frame">
+            <video class="territory-video" autoplay muted loop playsinline preload="metadata" poster="assets/app-screen-1.png" data-territory-video>
+              <source src="assets/kipzone_territorio.mp4" type="video/mp4">
+            </video>
+            <div class="territory-video-fallback">
+              <strong>Video de territorio</strong>
+              <span>Sube assets/kipzone_territorio.mp4 para activar esta animación.</span>
+            </div>
           </div>
         </aside>
       </div>
@@ -157,7 +156,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><a href="/privacy/">Privacidad</a><a href="/terms/">Términos</a><a href="mailto:gcarrasco80@gmail.com">Contacto</a></footer>
+  <footer class="site-footer"><a href="/privacy/">Privacidad</a><a href="/terms/">Términos</a><a href="/delete-account/">Eliminar cuenta</a><a href="mailto:gcarrasco80@gmail.com">Contacto</a></footer>
   <script src="script.js"></script>
 </body>
 </html>
