@@ -1,101 +1,133 @@
-// La colección run_events necesita permiso de lectura pública en las reglas de Firestore.
-
-// ==== PEGA ACÁ TU CONFIGURACIÓN DE FIREBASE ====
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_PROYECTO.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE",
+  authDomain: "red-social-1cn89d.firebaseapp.com",
+  projectId: "red-social-1cn89d",
+  storageBucket: "red-social-1cn89d.firebasestorage.app",
+  messagingSenderId: "989094287116",
+  appId: "1:989094287116:web:c093e38442ba31030d9b29"
 };
-// ===============================================
 
-// ==== NOMBRES REALES DE LOS CAMPOS DE run_events ====
-const CAMPOS = {
-  nombre: ["title"],
-  fecha: ["nextStart", "startDate"],
-  lugar: ["address"],
-  descripcion: ["description"],
-  imagen: ["imagen", "photo"],
-  tipo: ["eventType"],
-  estado: ["status"],
-  publico: ["discoverable"],
-  participantes: ["participantsCount"],
-  linkExterno: ["paymentLink"],
-  temas: ["topics"],
-  organizador: ["ownerUid"]
-};
-// ====================================================
-
-const fallbackEvents = [
-  { title: "Long Run del Parque", nextStart: new Date(Date.now() + 86400000 * 4), address: "Parque Metropolitano, Providencia", topics: ["Correr", "Comunidad"], eventType: "fixed" },
-  { title: "Trote Amanecer", nextStart: new Date(Date.now() + 86400000 * 7), address: "Parque Bicentenario, Vitacura", topics: ["Running social"], eventType: "alarm" },
-  { title: "5K sin filtros", nextStart: new Date(Date.now() + 86400000 * 11), address: "Parque O'Higgins, Santiago", topics: ["5K", "Todos los ritmos"], eventType: "fixed" }
-];
-
-const first = (obj, keys) => keys.map((key) => obj?.[key]).find((value) => value !== undefined && value !== null && value !== "");
-const toDate = (value) => value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value);
-const validConfig = !Object.values(firebaseConfig).some((value) => String(value).startsWith("TU_"));
 const grid = document.getElementById("events-grid");
 const moreButton = document.getElementById("events-more");
 let shown = 9;
 let allEvents = [];
 
-function normalize(data, id, example = false) {
-  const nextStart = toDate(first(data, CAMPOS.fecha));
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function normalize(raw) {
+  const nextStart = new Date(Number(raw.nextStartMillis));
+  if (!raw.id || !raw.title || Number.isNaN(nextStart.getTime())) return null;
   return {
-    id, example,
-    title: first(data, CAMPOS.nombre),
+    id: String(raw.id),
+    title: String(raw.title),
+    description: String(raw.description || ""),
+    address: String(raw.address || "Lugar por confirmar"),
+    image: String(raw.image || ""),
+    topics: Array.isArray(raw.topics) ? raw.topics.map(String) : [],
     nextStart,
-    address: first(data, CAMPOS.lugar) || "Lugar por confirmar",
-    image: first(data, CAMPOS.imagen),
-    eventType: first(data, CAMPOS.tipo),
-    topics: first(data, CAMPOS.temas) || [],
-    link: first(data, CAMPOS.linkExterno) || "#"
+    eventType: raw.eventType === "alarm" ? "alarm" : "fixed",
+    participantsCount: Math.max(0, Number(raw.participantsCount) || 0),
+    isPaid: raw.isPaidRegistration === true,
+    price: Math.max(0, Number(raw.registrationPrice) || 0),
+    paymentLink: String(raw.paymentLink || "")
   };
+}
+
+function renderState(title, message, retry = false) {
+  if (!grid) return;
+  grid.className = "events-state";
+  grid.replaceChildren();
+  grid.append(element("strong", "", title), element("span", "", message));
+  if (retry) {
+    const button = element("button", "button secondary", "Reintentar");
+    button.type = "button";
+    button.addEventListener("click", loadEvents);
+    grid.append(button);
+  }
+  moreButton?.classList.add("hidden");
 }
 
 function render() {
   if (!grid) return;
-  grid.innerHTML = allEvents.slice(0, shown).map((event) => {
-    const date = event.nextStart.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" });
-    const time = event.nextStart.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
-    const badge = event.example ? `Ejemplo${event.eventType !== "fixed" ? " · Actividad recurrente" : ""}` : event.eventType !== "fixed" ? "Actividad recurrente" : "Próximo";
-    const media = event.image ? `<div class="event-media"><img src="${event.image}" alt="Flyer de ${event.title}" loading="lazy"><span class="event-badge">${badge}</span></div>` : `<div class="event-media fallback"><b>${event.title}</b><span class="event-badge">${badge}</span></div>`;
-    const topics = event.topics.length ? `<div class="topics">${event.topics.map((topic) => `<span>${topic}</span>`).join("")}</div>` : "";
-    return `<article class="event">${media}<div class="event-body">${topics}<h3>${event.title}</h3><p class="event-date">${date} · ${time}</p><p class="event-place">${event.address}</p><a class="button secondary" href="${event.link}" ${event.link !== "#" ? 'target="_blank" rel="noreferrer"' : ""}>Ver detalle</a></div></article>`;
-  }).join("");
+  grid.className = "events-grid";
+  grid.replaceChildren();
+  allEvents.slice(0, shown).forEach((event) => {
+    const article = element("article", "event");
+    const media = element("div", `event-media${event.image ? "" : " fallback"}`);
+    if (event.image) {
+      const image = element("img");
+      image.src = event.image;
+      image.alt = `Flyer de ${event.title}`;
+      image.loading = "lazy";
+      media.append(image);
+    } else {
+      media.append(element("b", "", event.title));
+    }
+    media.append(element("span", "event-badge", event.eventType === "alarm" ? "Actividad recurrente" : "Próximo evento"));
+
+    const body = element("div", "event-body");
+    if (event.topics.length) {
+      const topicList = element("div", "topics");
+      event.topics.slice(0, 4).forEach((topic) => topicList.append(element("span", "", topic)));
+      body.append(topicList);
+    }
+    body.append(
+      element("h3", "", event.title),
+      element("p", "event-date", `${event.nextStart.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })} · ${event.nextStart.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}`),
+      element("p", "event-place", event.address)
+    );
+    if (event.description) body.append(element("p", "event-description", event.description));
+
+    const meta = element("div", "event-meta");
+    meta.append(
+      element("span", "", `${event.participantsCount} participante${event.participantsCount === 1 ? "" : "s"}`),
+      element("span", "", event.isPaid ? `$${event.price.toLocaleString("es-CL")} CLP` : "Gratis")
+    );
+    body.append(meta);
+
+    if (event.paymentLink) {
+      const link = element("a", "button secondary", "Inscribirme");
+      link.href = event.paymentLink;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      body.append(link);
+    }
+    article.append(media, body);
+    grid.append(article);
+  });
   moreButton?.classList.toggle("hidden", allEvents.length <= shown);
 }
 
-function useFallback() {
-  allEvents = fallbackEvents.map((event, index) => normalize(event, `example-${index}`, true));
+moreButton?.addEventListener("click", () => {
+  shown += 9;
   render();
-}
-
-moreButton?.addEventListener("click", () => { shown += 9; render(); });
+});
 
 async function loadEvents() {
-  if (!validConfig) return useFallback();
+  renderState("Cargando eventos…", "Consultando las próximas actividades de KipZone.");
   try {
-    const appSdk = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
-    const firestore = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
-    const app = appSdk.initializeApp(firebaseConfig);
-    const db = firestore.getFirestore(app);
-    // Una sola lógica para fixed y alarmas: ordenar y filtrar siempre por nextStart.
-    const q = firestore.query(firestore.collection(db, "run_events"), firestore.orderBy("nextStart", "asc"), firestore.limit(24));
-    const snapshot = await firestore.getDocs(q);
-    const now = new Date();
-    allEvents = snapshot.docs
-      .map((doc) => ({ raw: doc.data(), event: normalize(doc.data(), doc.id) }))
-      .filter(({ raw, event }) => first(raw, CAMPOS.publico) === true && first(raw, CAMPOS.estado) === "Activo" && event.title && !Number.isNaN(event.nextStart.getTime()) && event.nextStart >= now)
-      .map(({ event }) => event)
-      .sort((a, b) => a.nextStart.getTime() - b.nextStart.getTime());
-    if (!allEvents.length) useFallback(); else render();
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js");
+    const app = initializeApp(firebaseConfig);
+    const functions = getFunctions(app, "us-central1");
+    const response = await httpsCallable(functions, "publicEventsFeed")({});
+    allEvents = (response.data?.events || [])
+      .map(normalize)
+      .filter(Boolean)
+      .sort((a, b) => a.nextStart - b.nextStart);
+    if (!allEvents.length) {
+      renderState("Aún no hay próximos eventos públicos.", "El primero que publiques en KipZone aparecerá aquí.");
+      return;
+    }
+    render();
   } catch (error) {
-    console.error("No fue posible cargar run_events desde Firestore:", error);
-    useFallback();
+    console.error("No fue posible cargar los eventos públicos:", error);
+    renderState("No pudimos cargar los eventos.", "Intenta nuevamente en unos segundos.", true);
   }
 }
 
