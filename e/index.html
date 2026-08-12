@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Corrida en KipZone</title>
+<meta name="theme-color" content="#0A0E0C">
+
+<!--
+  Página pública de un evento. Es a donde llega el QR.
+
+  Quien la abre está parado en el punto de encuentro, a punto de salir a
+  trotar, con datos móviles malos. Todo acá está sujeto a eso:
+
+  - Sin framework ni SDK de Firebase. Se lee Firestore por su API REST, que
+    solo necesita el id del proyecto. Cargar el SDK completo son cientos de
+    kilobytes que esta página no puede permitirse.
+  - Un solo archivo. El id del evento viaja en ?id=, no en la ruta, porque el
+    hosting es estático: así un index.html sirve para todos los eventos.
+  - El nombre, el lugar y la hora se ven antes que cualquier botón. La persona
+    tiene que entender en dos segundos a qué se está uniendo.
+  - Si la app está instalada y los App Links verificaron, Android nunca llega
+    hasta acá: abre KipZone directamente.
+-->
+
+<style>
+  :root{
+    --bg:#0A0E0C; --surface:#151C18; --line:#243029;
+    --text:#F2F5F3; --soft:#8C9A93; --accent:#35D07F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text); min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    display:flex; justify-content:center;
+  }
+  .wrap{width:100%; max-width:460px; padding:20px 20px 40px}
+  .brand{display:flex;align-items:center;gap:7px;font-weight:800;font-size:15px;
+         margin-bottom:20px}
+  .brand span{color:var(--accent)}
+  .pill{display:inline-block;background:var(--accent);color:#06120C;
+        font-size:10px;font-weight:900;letter-spacing:1.5px;
+        padding:6px 11px;border-radius:30px;margin-bottom:14px}
+  .hero{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:18px;
+        background:var(--surface);display:block;margin-bottom:18px}
+  h1{font-size:30px;line-height:1.05;font-weight:900;letter-spacing:-.7px;
+     margin-bottom:12px;word-wrap:break-word}
+  .meta{display:flex;gap:10px;align-items:flex-start;color:var(--soft);
+        font-size:14px;margin-bottom:8px;line-height:1.35}
+  .meta b{color:var(--text);font-weight:600}
+  .divider{height:1px;background:var(--line);margin:20px 0}
+  .stats{display:flex;gap:22px;margin-bottom:22px}
+  .stat .n{font-size:24px;font-weight:900;color:var(--accent)}
+  .stat .l{font-size:10px;letter-spacing:1.2px;color:var(--soft);font-weight:700}
+  .cta{display:block;width:100%;background:var(--accent);color:#06120C;
+       text-align:center;padding:17px;border-radius:14px;font-weight:800;
+       font-size:16px;text-decoration:none;margin-bottom:10px}
+  .cta.ghost{background:transparent;color:var(--text);
+             border:1.5px solid var(--line);font-weight:700}
+  .hint{color:var(--soft);font-size:12px;text-align:center;line-height:1.5;
+        margin-top:14px}
+  .state{padding:60px 0;text-align:center;color:var(--soft);font-size:14px}
+  .skel{background:var(--surface);border-radius:8px;animation:p 1.2s infinite}
+  @keyframes p{0%,100%{opacity:.5}50%{opacity:.85}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">▲ Kip<span>Zone</span></div>
+  <div id="app"><div class="state">Cargando la corrida…</div></div>
+</div>
+
+<script>
+const PROJECT = 'red-social-1cn89d';
+const PLAY = 'https://play.google.com/store/apps/details?id=com.revive.redsocial';
+
+const params = new URLSearchParams(location.search);
+const eventId = (params.get('id') || '').trim();
+const app = document.getElementById('app');
+
+// Firestore REST devuelve los valores envueltos por tipo
+// ({"stringValue":"x"}), no en crudo. Esto los desenvuelve.
+function val(f){
+  if (!f) return null;
+  if ('stringValue'    in f) return f.stringValue;
+  if ('integerValue'   in f) return parseInt(f.integerValue, 10);
+  if ('doubleValue'    in f) return f.doubleValue;
+  if ('booleanValue'   in f) return f.booleanValue;
+  if ('timestampValue' in f) return new Date(f.timestampValue);
+  if ('geoPointValue'  in f) return f.geoPointValue;
+  return null;
+}
+
+function fecha(d){
+  if (!(d instanceof Date) || isNaN(d)) return '';
+  return d.toLocaleDateString('es-CL',
+    {weekday:'long', day:'numeric', month:'long'})
+    + ' · ' + d.toLocaleTimeString('es-CL',
+    {hour:'2-digit', minute:'2-digit'});
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function error(msg){
+  app.innerHTML =
+    '<div class="state">' + esc(msg) + '</div>' +
+    '<a class="cta" href="' + PLAY + '">Descargar KipZone</a>';
+}
+
+if (!eventId) {
+  error('No encontramos a qué corrida corresponde este enlace.');
+} else {
+  const url = 'https://firestore.googleapis.com/v1/projects/' + PROJECT +
+              '/databases/(default)/documents/run_events/' +
+              encodeURIComponent(eventId);
+
+  fetch(url)
+    .then(r => {
+      if (r.status === 404) throw new Error('NOT_FOUND');
+      if (!r.ok) throw new Error('HTTP_' + r.status);
+      return r.json();
+    })
+    .then(doc => {
+      const f = doc.fields || {};
+      const titulo   = val(f.title) || 'Corrida grupal';
+      const imagen   = val(f.imagen) || val(f.photo) || '';
+      const lugar    = val(f.address) || '';
+      const cuando   = fecha(val(f.nextStart) || val(f.startTime));
+      const inscritos= val(f.participantsCount) || 0;
+      const distancia= val(f.distanciaEstimada) || 0;
+
+      // El destino es el mismo enlace: si la app esta instalada y los App
+      // Links verificaron, Android la abre. Si no, la persona ya vio de que
+      // corrida se trata y el boton de descarga esta abajo.
+      const volver = location.href;
+
+      app.innerHTML =
+        '<div class="pill">SOCIAL RUN</div>' +
+        (imagen ? '<img class="hero" src="' + esc(imagen) + '" alt="">' : '') +
+        '<h1>' + esc(titulo) + '</h1>' +
+        (cuando ? '<div class="meta">🗓️<div><b>' + esc(cuando) + '</b></div></div>' : '') +
+        (lugar  ? '<div class="meta">📍<div>' + esc(lugar) + '</div></div>' : '') +
+        '<div class="divider"></div>' +
+        '<div class="stats">' +
+          '<div class="stat"><div class="n">' + inscritos + '</div>' +
+          '<div class="l">INSCRITOS</div></div>' +
+          (distancia > 0
+            ? '<div class="stat"><div class="n">' + distancia + ' km</div>' +
+              '<div class="l">DISTANCIA</div></div>'
+            : '') +
+        '</div>' +
+        '<a class="cta" href="' + esc(volver) + '">Sumarme a la corrida</a>' +
+        '<a class="cta ghost" href="' + PLAY + '">Descargar KipZone</a>' +
+        '<div class="hint">Si ya tienes la app, el botón de arriba te lleva ' +
+        'directo al evento.<br>Si no, descárgala y vuelve a escanear el ' +
+        'código.</div>';
+
+      document.title = titulo + ' · KipZone';
+    })
+    .catch(e => {
+      if (e.message === 'NOT_FOUND') {
+        error('Esta corrida ya no está disponible.');
+      } else {
+        // Las reglas ya permiten leer run_events sin sesion
+        // (allow read: if true), asi que llegar aca es casi siempre falta de
+        // conexion: la persona esta en un parque o un cerro con senal mala.
+        error('No pudimos cargar la corrida. Revisa tu conexión.');
+      }
+    });
+}
+</script>
+</body>
+</html>
