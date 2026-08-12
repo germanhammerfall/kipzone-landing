@@ -164,8 +164,9 @@ if (!eventId) {
       if (e.message === 'NOT_FOUND') {
         error('Esta corrida ya no está disponible.');
       } else {
-        // El caso mas probable es que las reglas de Firestore todavia no
-        // permitan lectura publica de run_events.
+        // Las reglas ya permiten leer run_events sin sesion
+        // (allow read: if true), asi que llegar aca es casi siempre falta de
+        // conexion: la persona esta en un parque o un cerro con senal mala.
         error('No pudimos cargar la corrida. Revisa tu conexión.');
       }
     });
