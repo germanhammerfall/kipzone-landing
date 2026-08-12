@@ -1,0 +1,16 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.revive.redsocial",
+      "sha256_cert_fingerprints": [
+        "07:B9:2E:02:75:D5:E2:F3:B3:51:EF:6C:44:C5:A6:74:C3:6B:E6:F4:36:9F:01:E0:13:34:AF:A3:7B:6D:6E:EF",
+        "42:8D:F6:56:14:97:B8:D2:8E:5A:B8:F6:34:77:94:F6:2D:90:BE:38:53:4D:B6:10:AA:C7:84:9C:03:48:38:BF",
+        "D1:1C:85:C7:D5:95:B3:B7:6B:0E:3D:37:58:A6:A9:DE:57:6F:F2:02:13:78:D5:6C:2E:17:3C:88:56:83:9D:E3",
+        "80:DC:C5:03:A2:01:AB:05:46:EA:9C:E4:65:04:B4:06:35:82:F7:C7:0E:77:D3:C5:BD:4F:61:51:B3:9B:69:A4",
+        "B8:D1:56:14:05:37:74:29:F5:E2:35:BD:AE:4F:07:11:A7:45:AD:7A:75:69:34:59:8F:A1:90:B0:D1:8D:93:37"
+      ]
+    }
+  }
+]
