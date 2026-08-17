@@ -34,7 +34,12 @@ function normalize(raw) {
     participantsCount: Math.max(0, Number(raw.participantsCount) || 0),
     isPaid: raw.isPaidRegistration === true,
     price: Math.max(0, Number(raw.registrationPrice) || 0),
-    paymentLink: String(raw.paymentLink || "")
+    paymentLink: String(raw.paymentLink || ""),
+    ticketingEnabled: raw.ticketingEnabled === true,
+    ticketCapacity: Math.max(0, Number(raw.ticketCapacity) || 0),
+    ticketsIssuedCount: Math.max(0, Number(raw.ticketsIssuedCount) || 0),
+    soldOut: raw.soldOut === true,
+    freeRemaining: Math.max(0, Number(raw.freeRemaining) || 0)
   };
 }
 
@@ -83,20 +88,41 @@ function render() {
     );
     if (event.description) body.append(element("p", "event-description", event.description));
 
+    const registeredCount = event.ticketingEnabled ? event.ticketsIssuedCount : event.participantsCount;
+    const availability = event.soldOut
+      ? "Entradas agotadas"
+      : event.freeRemaining > 0
+        ? `${event.freeRemaining} gratis disponibles`
+        : event.isPaid
+          ? `$${event.price.toLocaleString("es-CL")} CLP`
+          : "Gratis";
     const meta = element("div", "event-meta");
     meta.append(
-      element("span", "", `${event.participantsCount} participante${event.participantsCount === 1 ? "" : "s"}`),
-      element("span", "", event.isPaid ? `$${event.price.toLocaleString("es-CL")} CLP` : "Gratis")
+      element("span", "", `${registeredCount} participante${registeredCount === 1 ? "" : "s"}`),
+      element("span", "", availability)
     );
     body.append(meta);
 
-    if (event.paymentLink) {
-      const link = element("a", "button secondary", "Inscribirme");
-      link.href = event.paymentLink;
-      link.target = "_blank";
-      link.rel = "noreferrer";
-      body.append(link);
+    const actions = element("div", "event-actions");
+    const details = element("a", "button primary", "Ver evento");
+    details.href = `https://kipzone-landing.germancarrasco.chatgpt.site/eventos/detalle?id=${encodeURIComponent(event.id)}`;
+    actions.append(details);
+    if (event.ticketingEnabled) {
+      if (event.soldOut) {
+        actions.append(element("span", "button secondary event-sold-out", "Entradas agotadas"));
+      } else {
+        const registration = element("a", "button secondary", "Inscribirme");
+        registration.href = `https://kipzone-landing.germancarrasco.chatgpt.site/eventos/inscripcion?id=${encodeURIComponent(event.id)}`;
+        actions.append(registration);
+      }
+    } else if (event.paymentLink) {
+      const payment = element("a", "button secondary", "Inscribirme");
+      payment.href = event.paymentLink;
+      payment.target = "_blank";
+      payment.rel = "noreferrer";
+      actions.append(payment);
     }
+    body.append(actions);
     article.append(media, body);
     grid.append(article);
   });
