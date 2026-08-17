@@ -19,9 +19,9 @@
     <a class="brand" href="#inicio" aria-label="KipZone inicio"><img src="../assets/kipzone-wordmark.svg" alt="KipZone"></a>
     <button class="menu-button" type="button" aria-label="Abrir menú" aria-expanded="false" data-menu>Menú</button>
     <nav data-nav>
-      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#demostracion">Demostración</a>
       <a href="#eventos">Eventos</a>
-      <a href="#ejemplo">Ejemplo</a>
+      <a href="#como-funciona">Cómo funciona</a>
       <a href="#preguntas">Preguntas</a>
       <a class="nav-profile" href="https://kipzone-landing.germancarrasco.chatgpt.site/organizadores/perfil">Mi perfil</a>
       <a class="button primary" href="https://kipzone-landing.germancarrasco.chatgpt.site/organizadores/crear">Crear mi evento</a>
@@ -40,8 +40,56 @@
           <div class="actions"><a class="button primary" href="https://kipzone-landing.germancarrasco.chatgpt.site/organizadores/crear">Crear mi evento gratis</a><a class="button secondary" href="#eventos">Ver próximos eventos</a></div>
           <div class="trust"><span>Sin costo</span><span>Inscribes donde quieras</span><span>Listo en 1 minuto</span></div>
         </div>
-        <div class="phone"><img src="../assets/app-screen-1.png" alt="Mapa de KipZone mostrando territorios de running"></div>
+        <div class="phone hero-phone">
+          <div class="real-phone hero-phone-device" aria-label="Mapa de KipZone mostrando territorios de social runs">
+            <span class="phone-button action-button"></span>
+            <span class="phone-button volume-up"></span>
+            <span class="phone-button volume-down"></span>
+            <span class="phone-button power-button"></span>
+            <div class="phone-screen hero-phone-screen">
+              <img src="assets/hero-territory-screen.jpeg" alt="Mapa de KipZone con territorios de social runs en Viña del Mar">
+              <span class="screen-reflection"></span>
+              <span class="dynamic-island"><i></i><b></b></span>
+            </div>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <section class="scroll-demo" id="demostracion">
+      <div class="scroll-demo-sticky">
+        <div class="scroll-demo-copy">
+          <p class="eyebrow">Tu carrera cambia el mapa</p>
+          <h2>Corre. Cierra la ruta. <em>Conquista la zona.</em></h2>
+          <p>Avanza con el scroll y mira cómo un social run se convierte en territorio para tu comunidad.</p>
+          <div class="scroll-demo-steps" aria-hidden="true"><span>Corre</span><span>Conquista</span><span>Defiende</span></div>
+        </div>
+        <div class="scroll-phone-wrap">
+          <div class="device-scene">
+            <div class="real-phone" aria-label="Demostración de una ruta de running conquistando territorio">
+              <span class="phone-button action-button"></span>
+              <span class="phone-button volume-up"></span>
+              <span class="phone-button volume-down"></span>
+              <span class="phone-button power-button"></span>
+              <div class="phone-screen">
+                <canvas width="414" height="896" role="img" aria-label="La ruta avanza y conquista un territorio a medida que haces scroll"></canvas>
+                <span class="screen-reflection"></span>
+                <span class="dynamic-island"><i></i><b></b></span>
+              </div>
+            </div>
+          </div>
+          <div class="scroll-progress" aria-hidden="true"><i></i></div>
+          <p>Desliza para conquistar</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal priority-events" id="eventos">
+      <p class="eyebrow">Esto ya está pasando</p><h2>Eventos reales en KipZone</h2>
+      <p class="section-lead">Encuentra tu próxima salida o crea la tuya. La comunidad aparece antes que la explicación.</p>
+      <div id="events-grid" class="events-grid" aria-live="polite"><article class="event skeleton"><div></div><span></span><span></span></article><article class="event skeleton"><div></div><span></span><span></span></article><article class="event skeleton"><div></div><span></span><span></span></article></div>
+      <button id="events-more" class="button secondary hidden" type="button">Ver más</button>
+      <div class="event-cta"><div><p class="eyebrow">Haz visible tu comunidad</p><h3>¿No ves el tuyo? Créalo hoy y aparece acá.</h3></div><a class="button primary" href="https://kipzone-landing.germancarrasco.chatgpt.site/organizadores/crear">Crear mi evento</a></div>
     </section>
 
     <section class="section reveal problem">
@@ -104,16 +152,9 @@
       <span class="demo-tag">Demostración</span><p class="eyebrow">Ficha de evento</p><h2>Así se ve un social run en KipZone</h2>
       <div class="example-card">
         <div class="example-photo"><img src="assets/social-run-santiago.jpg" alt="Grupo diverso de corredores en un parque urbano de Santiago al amanecer"><span>Ejemplo</span></div>
-        <div class="example-info"><p class="eyebrow">Domingo · 08:00</p><h3>Vuelta al Parque</h3><p>Parque Bicentenario · Vitacura</p><div class="territory-animation-card"><video autoplay muted loop playsinline preload="metadata" aria-label="Animación de una ruta conquistando un territorio en el mapa"><source src="assets/territory-animation.mp4" type="video/mp4"></video><span>Territorio protegido · 71 h restantes</span></div><div class="stats"><strong>48 <small>corredores</small></strong><strong>12 <small>en el mapa</small></strong></div><div class="people" aria-label="Participantes de ejemplo"><i>CM</i><i>AR</i><i>JV</i><i>LP</i><i>+8</i></div></div>
+        <div class="example-info"><p class="eyebrow">Domingo · 08:00</p><h3>Vuelta al Parque</h3><p>Parque Bicentenario · Vitacura</p><div class="territory-animation-card"><img src="../assets/app-screen-1.png" alt="Mapa de KipZone con el territorio del evento"><span>Territorio protegido · 71 h restantes</span></div><div class="stats"><strong>48 <small>corredores</small></strong><strong>12 <small>en el mapa</small></strong></div><div class="people" aria-label="Participantes de ejemplo"><i>CM</i><i>AR</i><i>JV</i><i>LP</i><i>+8</i></div></div>
       </div>
       <div class="comments"><article><span>Ejemplo</span>“Nos quitaron el parque, hay que volver el domingo.”</article><article><span>Ejemplo</span>“¿Cómo hago para salir en el mapa?”</article><article><span>Ejemplo</span>“Ya llevamos tres zonas con el nombre del grupo.”</article></div>
-    </section>
-
-    <section class="section reveal" id="eventos">
-      <p class="eyebrow">Próximas actividades</p><h2>Social runs en KipZone</h2>
-      <div id="events-grid" class="events-grid" aria-live="polite"><article class="event skeleton"><div></div><span></span><span></span></article><article class="event skeleton"><div></div><span></span><span></span></article><article class="event skeleton"><div></div><span></span><span></span></article></div>
-      <button id="events-more" class="button secondary hidden" type="button">Ver más</button>
-      <div class="event-cta"><div><p class="eyebrow">Haz visible tu comunidad</p><h3>¿No ves el tuyo? Créalo hoy y aparece acá.</h3></div><a class="button primary" href="https://kipzone-landing.germancarrasco.chatgpt.site/organizadores/crear">Crear mi evento</a></div>
     </section>
 
     <section class="section sponsor reveal"><div><p class="eyebrow">Respaldo real</p><h2>¿Trabajas con auspiciadores?</h2></div><div><p>La ficha de cada social run muestra la ruta real, el lugar, la fecha y la comunidad que participó. Es un respaldo visual concreto para las marcas que apoyan tu evento.</p><p>El territorio puede llevar el nombre de tu evento y de la marca que lo acompañó.</p><a class="button primary" href="https://wa.me/56936256916?text=Hola%2C%20organizo%20social%20runs%20y%20quiero%20crear%20mi%20evento%20en%20KipZone." target="_blank" rel="noreferrer">Conversemos</a></div></section>
