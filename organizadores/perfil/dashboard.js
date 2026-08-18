@@ -1,4 +1,4 @@
-import { authMessage, formatEventDate, getFirebase, normalizeEvent, signInWithGoogle } from "../firebase-client.js";
+import { authMessage, eventBelongsToUser, formatEventDate, getFirebase, normalizeEvent, signInWithGoogle } from "../firebase-client.js";
 
 const loading = document.getElementById("panel-loading");
 const loginView = document.getElementById("login-view");
@@ -50,7 +50,9 @@ async function loadOwnedEvents(uid) {
   results.forEach((result) => {
     if (result.status !== "fulfilled") return;
     result.value.forEach((snapshot) => {
-      const event = normalizeEvent(snapshot.id, snapshot.data());
+      const data = snapshot.data();
+      if (!eventBelongsToUser(data, uid)) return;
+      const event = normalizeEvent(snapshot.id, data);
       if (event) byId.set(event.id, event);
     });
   });

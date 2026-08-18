@@ -1,4 +1,4 @@
-import { authMessage, combineDateAndTime, dateInputValue, eventOwnerId, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js";
+import { authMessage, combineDateAndTime, dateInputValue, eventBelongsToUser, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js";
 
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";
 const loading = document.getElementById("edit-loading");
@@ -72,7 +72,7 @@ async function loadEvent(user) {
       return;
     }
     eventData = snapshot.data();
-    if (eventOwnerId(eventData) && eventOwnerId(eventData) !== user.uid) {
+    if (!eventBelongsToUser(eventData, user.uid)) {
       showGate("Esta cuenta no es la propietaria", "Entra con la misma cuenta que creó el evento en KipZone.");
       return;
     }

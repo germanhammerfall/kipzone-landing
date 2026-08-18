@@ -72,6 +72,11 @@ export function eventOwnerId(data) {
   return String(data?.ownerUid || data?.creatorUid || data?.uid || data?.userRef?.id || "");
 }
 
+export function eventBelongsToUser(data, uid) {
+  const ownerUid = eventOwnerId(data);
+  return Boolean(ownerUid && uid && ownerUid === String(uid));
+}
+
 export function normalizeEvent(id, data) {
   if (!id || !data?.title) return null;
   const nextStart = eventDate(data);
