@@ -26,8 +26,12 @@ const scrollDemo = document.querySelector('.scroll-demo');
 const scrollCanvas = scrollDemo?.querySelector('canvas');
 const scrollContext = scrollCanvas?.getContext('2d');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const heroSection = document.querySelector('.hero');
+const heroCanvas = heroSection?.querySelector('.hero-scroll-canvas');
+const heroContext = heroCanvas?.getContext('2d');
 let scrollFrame = 0;
 let wantedFrame = 0;
+let heroWantedFrame = 0;
 
 const territoryFrames = Array.from({ length: 52 }, () => new Image());
 
@@ -36,7 +40,7 @@ if (scrollDemo) {
   scrollDemo.classList.toggle('embedded-preview', embeddedPreview);
 }
 
-const drawTerritoryFrame = (index) => {
+const drawTerritoryFrame = (index, canvas = scrollCanvas, context = scrollContext) => {
   const nearestReadyFrame = territoryFrames.reduce((closest, candidate, candidateIndex) => {
     if (!candidate.complete || !candidate.naturalWidth) return closest;
     return closest < 0 || Math.abs(candidateIndex - index) < Math.abs(closest - index)
@@ -46,10 +50,10 @@ const drawTerritoryFrame = (index) => {
   const image = territoryFrames[index]?.complete && territoryFrames[index]?.naturalWidth
     ? territoryFrames[index]
     : territoryFrames[nearestReadyFrame];
-  if (!scrollCanvas || !scrollContext || !image?.complete || !image.naturalWidth) return;
+  if (!canvas || !context || !image?.complete || !image.naturalWidth) return;
 
   const sourceRatio = image.naturalWidth / image.naturalHeight;
-  const canvasRatio = scrollCanvas.width / scrollCanvas.height;
+  const canvasRatio = canvas.width / canvas.height;
   let sourceX = 0;
   let sourceY = 0;
   let sourceWidth = image.naturalWidth;
@@ -63,12 +67,25 @@ const drawTerritoryFrame = (index) => {
     sourceY = (image.naturalHeight - sourceHeight) / 2;
   }
 
-  scrollContext.clearRect(0, 0, scrollCanvas.width, scrollCanvas.height);
-  scrollContext.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, scrollCanvas.width, scrollCanvas.height);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+};
+
+const syncHeroAnimation = () => {
+  if (!heroSection || !heroCanvas || !heroContext) return;
+
+  const rect = heroSection.getBoundingClientRect();
+  const travel = Math.max(1, heroSection.offsetHeight - window.innerHeight * .35);
+  const progress = reducedMotion.matches ? 0 : Math.min(1, Math.max(0, -rect.top / travel));
+
+  heroWantedFrame = Math.round(progress * (territoryFrames.length - 1));
+  drawTerritoryFrame(heroWantedFrame, heroCanvas, heroContext);
+  heroSection.style.setProperty('--hero-scroll-progress', String(progress));
 };
 
 const syncTerritoryAnimation = () => {
   scrollFrame = 0;
+  syncHeroAnimation();
   if (!scrollDemo || !scrollCanvas || !scrollContext) return;
 
   const rect = scrollDemo.getBoundingClientRect();
@@ -102,7 +119,7 @@ const loadTerritoryFrames = () => {
       const image = territoryFrames[index];
       image.decoding = 'async';
       image.onload = () => {
-        if (index === wantedFrame || index === 0 || mobile) requestTerritorySync();
+        if (index === wantedFrame || index === heroWantedFrame || index === 0 || mobile) requestTerritorySync();
       };
       image.src = `assets/territory-frames-360/frame-${String(index + 1).padStart(3, '0')}.webp`;
     });
@@ -113,7 +130,7 @@ const loadTerritoryFrames = () => {
 };
 
 window.addEventListener('kipzone:events-ready', loadTerritoryFrames, { once: true });
-window.setTimeout(loadTerritoryFrames, 8000);
+window.setTimeout(loadTerritoryFrames, 1200);
 
 window.addEventListener('scroll', requestTerritorySync, { passive: true });
 window.addEventListener('resize', requestTerritorySync);
