@@ -99,6 +99,8 @@ export function eventCoordinates(data) {
 export function normalizeEvent(id, data) {
   if (!id || !data?.title) return null;
   const nextStart = eventDate(data);
+  const participantsCount = Math.max(0, Number(data.participantsCount) || 0);
+  const webRegistrationsCount = Math.max(0, Number(data.webRegistrationsCount) || 0);
   return {
     ...data,
     id: String(id),
@@ -109,7 +111,9 @@ export function normalizeEvent(id, data) {
     topics: Array.isArray(data.topics) ? data.topics.map(String) : [],
     nextStart,
     eventType: data.eventType === "alarm" ? "alarm" : "fixed",
-    participantsCount: Math.max(0, Number(data.participantsCount) || 0),
+    participantsCount,
+    webRegistrationsCount,
+    totalParticipantsCount: participantsCount + webRegistrationsCount,
     paymentLink: safeHttpUrl(data.paymentLink),
     discoverable: data.discoverable !== false,
     status: String(data.status || "Activo"),

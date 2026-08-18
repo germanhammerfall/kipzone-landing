@@ -15,10 +15,13 @@
   <section id="auth-gate" class="wizard-card auth-card" hidden>
     <p class="eyebrow">Cuenta del organizador</p><h1>Entra para publicar.</h1><p class="wizard-lead">Usa tu cuenta de Google o el correo y contraseña de KipZone.</p>
     <form id="login-form"><button id="google-login" class="google-button" type="button">Continuar con Google</button><div class="auth-divider" aria-hidden="true">o usa tu correo</div><label>Correo electrónico<input id="login-email" type="email" autocomplete="email" required></label><label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label><p id="login-error" class="wizard-message" hidden></p><button id="login-submit" class="button primary auth-submit" type="submit">Entrar</button></form>
+    <p class="wizard-app-link">¿Todavía no tienes KipZone? <a href="https://play.google.com/store/apps/details?id=com.revive.redsocial" target="_blank" rel="noopener noreferrer">Descarga la app en Google Play</a>.</p>
   </section>
 
   <form id="create-form" class="wizard-card" hidden>
     <p class="eyebrow">Crea tu social run</p><h1>Publica el próximo encuentro.</h1><p class="wizard-lead">Completa la información que verá la comunidad. Después podrás editarla desde “Mis eventos”.</p>
+
+    <aside class="wizard-app-callout"><strong>Conquista territorio con la app</strong><p>Puedes crear tu evento aquí. Para registrar la corrida y capturar territorio, el organizador debe tener KipZone instalada.</p><a class="button secondary" href="https://play.google.com/store/apps/details?id=com.revive.redsocial" target="_blank" rel="noopener noreferrer">Descargar KipZone en Google Play</a></aside>
 
     <label>Nombre del evento<input id="title" minlength="5" maxlength="80" required placeholder="Ej: Vuelta al Parque"></label>
     <label>Descripción<textarea id="description" rows="6" minlength="20" maxlength="1200" required placeholder="Cuenta de qué se trata, ritmo, distancia y recomendaciones."></textarea><span class="field-count"><b id="description-count">0</b>/1200</span></label>
@@ -43,7 +46,7 @@
     <div class="wizard-actions"><a class="button secondary" href="/organizadores/perfil/">Cancelar</a><button id="create-submit" class="button primary" type="submit">Publicar evento</button></div>
   </form>
 
-  <section id="success-view" class="wizard-success" hidden><span>✓</span><p class="eyebrow">Evento publicado</p><h1>Ya está en KipZone.</h1><p id="success-copy"></p><a id="success-link" class="button primary" href="/organizadores/perfil/">Ver el evento</a></section>
+  <section id="success-view" class="wizard-success" hidden><span>✓</span><p class="eyebrow">Evento publicado</p><h1>Ya está en KipZone.</h1><p id="success-copy"></p><a id="success-link" class="button primary" href="/organizadores/perfil/">Ver el evento</a><a class="button secondary wizard-success-download" href="https://play.google.com/store/apps/details?id=com.revive.redsocial" target="_blank" rel="noopener noreferrer">Descargar app para conquistar territorio</a></section>
   <script type="module" src="create.js"></script>
 </body>
 </html>

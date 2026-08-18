@@ -66,7 +66,7 @@ function updateStats() {
   const now = Date.now();
   document.getElementById("stat-total").textContent = String(allEvents.length);
   document.getElementById("stat-upcoming").textContent = String(allEvents.filter((event) => event.nextStart && event.nextStart.getTime() >= now).length);
-  document.getElementById("stat-people").textContent = String(allEvents.reduce((sum, event) => sum + event.participantsCount, 0));
+  document.getElementById("stat-people").textContent = String(allEvents.reduce((sum, event) => sum + event.totalParticipantsCount, 0));
 }
 
 function renderEvents() {
@@ -106,7 +106,10 @@ function renderEvents() {
     if (event.description) body.append(node("p", "managed-description", event.description));
     const meta = node("div", "managed-meta");
     const people = node("span");
-    people.append(node("strong", "", String(event.participantsCount)), document.createTextNode(" participantes"));
+    people.append(
+      node("strong", "", String(event.totalParticipantsCount)),
+      document.createTextNode(` participantes · ${event.participantsCount} app + ${event.webRegistrationsCount} QR`)
+    );
     meta.append(people, node("span", "", event.status));
     const actions = node("div", "managed-actions");
     const edit = node("a", "button primary", "Editar evento");

@@ -28,7 +28,7 @@ function registrationBlock(event) {
     return box;
   }
 
-  const registered = event.ticketingEnabled ? event.ticketsIssuedCount : event.participantsCount;
+  const registered = event.totalParticipantsCount;
   const headline = event.isPaid ? `$${event.price.toLocaleString("es-CL")} CLP` : "Participación gratuita";
   box.append(node("h3", "", headline), node("p", "", `${registered} persona${registered === 1 ? "" : "s"} inscrita${registered === 1 ? "" : "s"}.`));
 
@@ -85,7 +85,10 @@ function render(event) {
   const placeFact = node("span");
   placeFact.append(node("small", "", "Lugar"), node("b", "", event.address));
   const peopleFact = node("span");
-  peopleFact.append(node("small", "", "Participantes"), node("b", "", String(event.participantsCount)));
+  peopleFact.append(
+    node("small", "", "Participantes · app + QR"),
+    node("b", "", String(event.totalParticipantsCount))
+  );
   facts.append(dateFact, placeFact, peopleFact);
   sidebar.append(facts, registrationBlock(event));
 

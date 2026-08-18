@@ -30,6 +30,7 @@
   .divider{height:1px;background:var(--line);margin:20px 0}
   .stats{display:flex;gap:24px;margin:18px 0}.stat .n{font-size:24px;font-weight:900;color:var(--accent)}
   .stat .l{font-size:10px;letter-spacing:1.2px;color:var(--soft);font-weight:750}
+  .stat .detail{margin-top:4px;color:var(--soft);font-size:11px}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;
     padding:20px;margin-top:18px}.card p{color:var(--soft);font-size:13px;line-height:1.5}
   .field{margin-top:16px}.field label{display:block;font-size:13px;font-weight:750;margin-bottom:7px}
@@ -117,6 +118,7 @@ function occurrenceKey(d){return String(Math.floor(d.getTime()/1000));}
 function eventDocUrl(){return DB+'/run_events/'+encodeURIComponent(eventId);}
 function registrationId(uid,start){return uid+'_'+occurrenceKey(start);}
 function registrationUrl(id){return eventDocUrl()+'/web_registrations/'+encodeURIComponent(id);}
+function registrationCreateUrl(id){return eventDocUrl()+'/web_registrations?documentId='+encodeURIComponent(id);}
 function readAuth(){try{return JSON.parse(localStorage.getItem(AUTH_STORAGE)||'null');}catch(_){return null;}}
 function saveAuth(a){localStorage.setItem(AUTH_STORAGE,JSON.stringify(a));return a;}
 
@@ -160,7 +162,9 @@ function renderEvent(doc){
   const start=val(f.nextStart)||val(f.startDate)||val(f.startTime);
   eventData={
     title:val(f.title)||'Corrida grupal',image:val(f.imagen)||val(f.photo)||'',
-    address:val(f.address)||'',start:start,participants:val(f.participantsCount)||0,
+    address:val(f.address)||'',start:start,
+    participants:Math.max(0,Number(val(f.participantsCount))||0),
+    webRegistrations:Math.max(0,Number(val(f.webRegistrationsCount))||0),
     distance:val(f.distanciaEstimada)||0,enabled:val(f.webRegistrationEnabled)!==false,
     requireRut:val(f.webRegistrationRequireRut)===true,
     checkIn:val(f.webRegistrationCheckInEnabled)===true,
@@ -176,15 +180,16 @@ function renderEvent(doc){
     '<h1>'+esc(e.title)+'</h1>'+
     '<div class="meta">🗓️ <div><b>'+esc(fecha(e.start))+'</b></div></div>'+
     (e.address?'<div class="meta">📍 <div>'+esc(e.address)+'</div></div>':'')+
-    '<div class="stats"><div class="stat"><div class="n">'+e.participants+'</div>'+
-    '<div class="l">EN KIPZONE</div></div>'+
-    (e.distance>0?'<div class="stat"><div class="n">'+e.distance+' km</div><div class="l">DISTANCIA</div></div>':'')+
+    '<div class="stats"><div class="stat"><div class="n">'+(e.participants+e.webRegistrations)+'</div>'+
+    '<div class="l">INSCRITOS</div><div class="detail">'+e.participants+' app + '+e.webRegistrations+' QR</div></div>'+
+    (e.distance>0?'<div class="stat"><div class="n">'+new Intl.NumberFormat('es-CL',{maximumFractionDigits:1}).format(e.distance)+' km</div><div class="l">DISTANCIA</div></div>':'')+
     '</div>'+
     ((!e.enabled||e.closed)?
       '<div class="card"><h2>Inscripciones cerradas</h2><p>El organizador cerró la inscripción web para esta fecha.</p></div>':
       registrationForm(e))+
-    '<a class="cta ghost" href="'+esc(location.href)+'">Ya tengo KipZone</a>'+
-    '<div class="hint">Si tienes la app instalada, este enlace abre directamente el evento.</div>';
+    '<a class="cta ghost" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone en Google Play</a>'+
+    '<div class="hint">La app te permite registrar tu recorrido y conquistar territorio para este evento.</div>'+
+    '<a class="cta ghost" href="'+esc(location.href)+'">Ya tengo KipZone</a>';
   document.title=e.title+' · KipZone';
   if(e.enabled&&!e.closed) document.getElementById('registration-form').addEventListener('submit',submitRegistration);
 }
@@ -220,6 +225,11 @@ async function submitRegistration(ev){
   try{
     const auth=await ensureAuth();
     const id=registrationId(auth.uid,eventData.start);
+    const saved=JSON.parse(localStorage.getItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start))||'null');
+    if(saved&&saved.id===id&&saved.token){
+      renderSuccess(id,saved.token,fullName);
+      return;
+    }
     const token=randomToken();
     const fields={
       fullName:fieldString(fullName),phone:fieldString(phone),rut:fieldString(rut),
@@ -229,8 +239,8 @@ async function submitRegistration(ev){
       privacyVersion:fieldString('2026-08'),personalQrToken:fieldString(token),
       checkInEnabled:fieldBool(eventData.checkIn)
     };
-    await jsonFetch(registrationUrl(id),{
-      method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+auth.idToken},
+    await jsonFetch(registrationCreateUrl(id),{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+auth.idToken},
       body:JSON.stringify({fields:fields})
     });
     localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),JSON.stringify({id:id,token:token}));
@@ -238,6 +248,7 @@ async function submitRegistration(ev){
   }catch(err){
     const m=String(err.message||'');
     if(m.includes('OPERATION_NOT_ALLOWED')) errorBox.textContent='La inscripción web aún no está habilitada. Activa el acceso anónimo en Firebase Authentication.';
+    else if(err.status===409) errorBox.textContent='Tu inscripción para esta fecha ya fue registrada.';
     else if(err.status===403) errorBox.textContent='La inscripción todavía no está habilitada para este evento.';
     else errorBox.textContent='No pudimos completar la inscripción. Revisa tu conexión e inténtalo nuevamente.';
     button.disabled=false;button.textContent='Confirmar mi inscripción';
@@ -249,8 +260,8 @@ function renderSuccess(id,token,name){
     '<p>'+esc(name)+', el organizador ya cuenta contigo para <b>'+esc(eventData.title)+'</b>.</p>'+
     (eventData.checkIn?'<div id="personal-qr" class="personal-qr" aria-label="QR personal de llegada"></div>'+
       '<div class="code">PRESENTA ESTE QR AL LLEGAR</div><p style="margin-top:12px">Guárdalo o toma una captura de pantalla.</p>':'')+
-    '</section><a class="cta ghost" href="'+PLAY+'">Registrar mi recorrido con KipZone</a>'+
-    '<div class="hint">La aplicación es opcional para tu inscripción.</div>';
+    '</section><a class="cta" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone y conquistar territorio</a>'+
+    '<div class="hint">Tu inscripción ya está guardada. Descarga la app para registrar tu recorrido y conquistar territorio.</div>';
   if(eventData.checkIn&&window.QRCode){
     new QRCode(document.getElementById('personal-qr'),{text:checkUrl,width:220,height:220,
       colorDark:'#06120C',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.H});

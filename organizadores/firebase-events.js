@@ -57,7 +57,7 @@ function render() {
     );
     if (event.description) body.append(element("p", "event-description", event.description));
 
-    const registeredCount = event.ticketingEnabled ? event.ticketsIssuedCount : event.participantsCount;
+    const registeredCount = event.totalParticipantsCount;
     const availability = event.soldOut
       ? "Entradas agotadas"
       : event.freeRemaining > 0
