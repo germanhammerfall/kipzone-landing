@@ -48,6 +48,8 @@
     border:1.5px solid var(--line);font-weight:700;margin-top:10px}
   .hint{color:var(--soft);font-size:12px;text-align:center;line-height:1.5;margin-top:13px}
   .error{color:var(--danger);font-size:12px;line-height:1.4;margin:10px 0;min-height:17px}
+  .sms-code{text-align:center;letter-spacing:8px;font-size:23px;font-weight:800}
+  .sms-resend{border:0;background:none;color:var(--accent);padding:10px 0;font-size:12px;cursor:pointer}
   .state{padding:64px 8px;text-align:center;color:var(--soft);font-size:14px;line-height:1.5}
   .success{text-align:center}.check{width:58px;height:58px;border-radius:50%;background:var(--accent);
     color:#06120C;display:grid;place-items:center;font-size:30px;font-weight:900;margin:0 auto 15px}
@@ -79,6 +81,9 @@ const params = new URLSearchParams(location.search);
 const eventId = (params.get('id') || '').trim();
 const app = document.getElementById('app');
 let eventData = null;
+let phoneVerification = null;
+let phoneSdkPromise = null;
+let phoneRecaptcha = null;
 
 function val(f){
   if (!f) return null;
@@ -148,6 +153,58 @@ async function ensureAuth(){
   if(a&&a.refreshToken){try{return await refreshAuth(a);}catch(_){} }
   return newAnonymousAuth();
 }
+async function getPhoneSdk(){
+  if(!phoneSdkPromise){
+    phoneSdkPromise=Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js')
+    ]).then(async function(modules){
+      const appSdk=modules[0],authSdk=modules[1];
+      const name='kipzone-qr-phone';
+      const existing=appSdk.getApps().find(function(item){return item.name===name;});
+      const phoneApp=existing||appSdk.initializeApp({
+        apiKey:API_KEY,authDomain:'red-social-1cn89d.firebaseapp.com',
+        projectId:PROJECT,messagingSenderId:'989094287116',
+        appId:'1:989094287116:web:c093e38442ba31030d9b29'
+      },name);
+      const auth=authSdk.getAuth(phoneApp);
+      await authSdk.setPersistence(auth,authSdk.inMemoryPersistence);
+      auth.languageCode='es';
+      return {auth:auth,sdk:authSdk};
+    }).catch(function(err){phoneSdkPromise=null;throw err;});
+  }
+  return phoneSdkPromise;
+}
+async function sendPhoneCode(phone){
+  const client=await getPhoneSdk();
+  if(!phoneRecaptcha){
+    phoneRecaptcha=new client.sdk.RecaptchaVerifier(client.auth,'recaptcha-container',{
+      size:'invisible',
+      'expired-callback':function(){phoneVerification=null;}
+    });
+  }
+  try{
+    const confirmation=await client.sdk.signInWithPhoneNumber(client.auth,phone,phoneRecaptcha);
+    phoneVerification={phone:phone,confirmation:confirmation};
+    return phoneVerification;
+  }catch(err){
+    if(phoneRecaptcha){try{phoneRecaptcha.clear();}catch(_){}}
+    phoneRecaptcha=null;
+    throw err;
+  }
+}
+function phoneError(err){
+  const code=String(err&&err.code||err&&err.message||'').toLowerCase();
+  if(code.includes('invalid-verification-code'))return 'El código ingresado no es correcto. Revisa los seis números.';
+  if(code.includes('code-expired')||code.includes('session-expired'))return 'El código venció. Solicita uno nuevo.';
+  if(code.includes('too-many-requests'))return 'Hay demasiados intentos. Espera unos minutos y vuelve a intentarlo.';
+  if(code.includes('invalid-phone-number'))return 'Escribe un número de teléfono chileno válido.';
+  if(code.includes('quota-exceeded'))return 'El envío de mensajes está temporalmente no disponible.';
+  if(code.includes('unauthorized-domain'))return 'Este dominio todavía no está autorizado para verificar teléfonos.';
+  if(code.includes('operation-not-allowed'))return 'La verificación telefónica todavía no está habilitada en Firebase.';
+  if(code.includes('captcha-check-failed')||code.includes('missing-client-identifier'))return 'No pudimos validar la seguridad del envío. Recarga la página e inténtalo nuevamente.';
+  return '';
+}
 function fieldString(v){return {stringValue:String(v)};}
 function fieldBool(v){return {booleanValue:!!v};}
 function fieldTime(v){return {timestampValue:v.toISOString()};}
@@ -195,7 +252,7 @@ function renderEvent(doc){
 }
 function registrationForm(e){
   return '<section class="card"><h2>Inscríbete a esta corrida</h2>'+
-    '<p>Deja tus datos para que el organizador sepa quién participará.</p>'+
+    '<p>Deja tus datos y confirma tu teléfono con el código que recibirás por SMS.</p>'+
     '<form id="registration-form" novalidate>'+
       '<div class="field"><label for="fullName">Nombre completo</label>'+
       '<input id="fullName" name="fullName" autocomplete="name" maxlength="80" required placeholder="Ej: María González"></div>'+
@@ -206,8 +263,13 @@ function registrationForm(e){
       '<input id="rut" name="rut" inputmode="text" maxlength="12" required placeholder="Ej: 12.345.678-5">'+
       '<small>Este evento exige identificación. Tu RUT no aparecerá públicamente.</small></div>':'')+
       '<label class="consent"><input id="consent" type="checkbox" required><span>Acepto que KipZone y el organizador usen estos datos para gestionar mi inscripción y asistencia a este evento. Leí la <a href="'+PRIVACY+'" target="_blank" rel="noopener">política de privacidad</a>.</span></label>'+
+      '<div id="sms-step" class="field" hidden><label for="smsCode">Código de seis números</label>'+
+      '<input id="smsCode" class="sms-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">'+
+      '<small id="sms-hint">Escribe el código recibido por mensaje de texto.</small>'+
+      '<button id="resend-code" class="sms-resend" type="button">Reenviar código</button></div>'+
+      '<div id="recaptcha-container"></div>'+
       '<div id="form-error" class="error" role="alert"></div>'+
-      '<button id="submit" class="cta" type="submit">Confirmar mi inscripción</button>'+
+      '<button id="submit" class="cta" type="submit">Recibir código por SMS</button>'+
     '</form></section>';
 }
 async function submitRegistration(ev){
@@ -221,15 +283,41 @@ async function submitRegistration(ev){
   if(!phone){errorBox.textContent='Escribe un teléfono chileno válido.';return;}
   if(eventData.requireRut&&!validRut(rut)){errorBox.textContent='Revisa el RUT ingresado.';return;}
   if(!document.getElementById('consent').checked){errorBox.textContent='Debes aceptar el uso de datos para gestionar esta inscripción.';return;}
-  button.disabled=true;button.innerHTML='<span class="spinner"></span> Inscribiendo…';
+  if(!phoneVerification||phoneVerification.phone!==phone){
+    button.disabled=true;button.innerHTML='<span class="spinner"></span> Enviando código…';
+    try{
+      await sendPhoneCode(phone);
+      document.getElementById('sms-step').hidden=false;
+      document.getElementById('sms-hint').textContent='Enviamos un código de seis números al '+phone+'.';
+      document.getElementById('smsCode').value='';
+      document.getElementById('smsCode').focus();
+      document.getElementById('resend-code').onclick=async function(){
+        phoneVerification=null;
+        document.getElementById('smsCode').value='';
+        await submitRegistration({preventDefault:function(){}});
+      };
+      button.textContent='Confirmar mi inscripción';
+    }catch(err){
+      console.error('No fue posible enviar el código SMS:',err);
+      errorBox.textContent=phoneError(err)||'No pudimos enviar el código. Revisa tu número e inténtalo nuevamente.';
+      button.textContent='Recibir código por SMS';
+    }
+    button.disabled=false;
+    return;
+  }
+  const code=document.getElementById('smsCode').value.replace(/\D/g,'');
+  if(!/^[0-9]{6}$/.test(code)){errorBox.textContent='Escribe los seis números del código recibido.';return;}
+  button.disabled=true;button.innerHTML='<span class="spinner"></span> Verificando e inscribiendo…';
   try{
-    const auth=await ensureAuth();
+    const verified=await phoneVerification.confirmation.confirm(code);
+    const user=verified.user;
+    if(normalizePhone(user.phoneNumber)!==phone)throw new Error('PHONE_NUMBER_MISMATCH');
+    const idToken=await user.getIdToken();
+    const auth=saveAuth({uid:user.uid,idToken:idToken,refreshToken:user.refreshToken,
+      expiresAt:Date.now()+55*60*1000,phone:phone,provider:'phone'});
     const id=registrationId(auth.uid,eventData.start);
     const saved=JSON.parse(localStorage.getItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start))||'null');
-    if(saved&&saved.id===id&&saved.token){
-      renderSuccess(id,saved.token,fullName);
-      return;
-    }
+    if(saved&&saved.token){renderSuccess(saved.id,saved.token,fullName);return;}
     const token=randomToken();
     const fields={
       fullName:fieldString(fullName),phone:fieldString(phone),rut:fieldString(rut),
@@ -246,11 +334,10 @@ async function submitRegistration(ev){
     localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),JSON.stringify({id:id,token:token}));
     renderSuccess(id,token,fullName);
   }catch(err){
-    const m=String(err.message||'');
-    if(m.includes('OPERATION_NOT_ALLOWED')) errorBox.textContent='La inscripción web aún no está habilitada. Activa el acceso anónimo en Firebase Authentication.';
-    else if(err.status===409) errorBox.textContent='Tu inscripción para esta fecha ya fue registrada.';
-    else if(err.status===403) errorBox.textContent='La inscripción todavía no está habilitada para este evento.';
-    else errorBox.textContent='No pudimos completar la inscripción. Revisa tu conexión e inténtalo nuevamente.';
+    console.error('No fue posible confirmar la inscripción por SMS:',err);
+    if(err.status===409)errorBox.textContent='Tu inscripción para esta fecha ya fue registrada.';
+    else if(err.status===403)errorBox.textContent='La inscripción todavía no está habilitada para este evento.';
+    else errorBox.textContent=phoneError(err)||'No pudimos completar la inscripción. Revisa el código e inténtalo nuevamente.';
     button.disabled=false;button.textContent='Confirmar mi inscripción';
   }
 }
