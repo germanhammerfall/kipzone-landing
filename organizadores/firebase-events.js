@@ -104,6 +104,7 @@ moreButton?.addEventListener("click", () => {
 });
 
 async function loadEvents() {
+  document.getElementById("eventos")?.classList.add("visible");
   renderState("Cargando eventos…", "Consultando las próximas actividades de KipZone.");
   try {
     allEvents = (await loadPublicEvents()).sort((first, second) =>

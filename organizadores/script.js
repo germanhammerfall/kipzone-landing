@@ -18,7 +18,7 @@ const revealObserver = new IntersectionObserver((entries) => {
       revealObserver.unobserve(entry.target);
     }
   });
-}, { threshold: 0.12 });
+}, { threshold: 0.01 });
 
 document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
 
