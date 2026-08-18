@@ -32,6 +32,8 @@ const heroContext = heroCanvas?.getContext('2d');
 let scrollFrame = 0;
 let wantedFrame = 0;
 let heroWantedFrame = 0;
+let heroPlaybackStartedAt = 0;
+let heroPlaybackTimer = 0;
 
 const territoryFrames = Array.from({ length: 52 }, () => new Image());
 
@@ -76,11 +78,26 @@ const syncHeroAnimation = () => {
 
   const rect = heroSection.getBoundingClientRect();
   const travel = Math.max(48, Math.min(64, window.innerHeight * .07));
-  const progress = reducedMotion.matches ? 0 : Math.min(1, Math.max(0, -rect.top / travel));
+  const scrollProgress = Math.min(1, Math.max(0, -rect.top / travel));
+  const phase = heroPlaybackStartedAt ? ((Date.now() - heroPlaybackStartedAt) % 2400) / 2400 : 0;
+  const playbackProgress = phase <= .5 ? phase * 2 : (1 - phase) * 2;
+  const progress = reducedMotion.matches ? 0 : Math.max(scrollProgress, playbackProgress);
 
   heroWantedFrame = Math.round(progress * (territoryFrames.length - 1));
   drawTerritoryFrame(heroWantedFrame, heroCanvas, heroContext);
   heroSection.style.setProperty('--hero-scroll-progress', String(progress));
+};
+
+
+const startHeroPlayback = () => {
+  if (!heroSection || !heroCanvas || !heroContext || reducedMotion.matches || heroPlaybackTimer) return;
+
+  heroPlaybackStartedAt = Date.now();
+  heroPlaybackTimer = window.setInterval(() => {
+    const rect = heroSection.getBoundingClientRect();
+    if (document.hidden || rect.bottom <= 0 || rect.top >= window.innerHeight) return;
+    syncHeroAnimation();
+  }, 80);
 };
 
 const syncTerritoryAnimation = () => {
@@ -119,6 +136,7 @@ const loadTerritoryFrames = () => {
       const image = territoryFrames[index];
       image.decoding = 'async';
       image.onload = () => {
+        if (index === 0) startHeroPlayback();
         if (index === wantedFrame || index === heroWantedFrame || index === 0 || mobile) requestTerritorySync();
       };
       image.src = `assets/territory-frames-360/frame-${String(index + 1).padStart(3, '0')}.webp`;
@@ -130,7 +148,7 @@ const loadTerritoryFrames = () => {
 };
 
 window.addEventListener('kipzone:events-ready', loadTerritoryFrames, { once: true });
-window.setTimeout(loadTerritoryFrames, 1200);
+window.setTimeout(loadTerritoryFrames, 350);
 
 window.addEventListener('scroll', requestTerritorySync, { passive: true });
 window.addEventListener('resize', requestTerritorySync);
