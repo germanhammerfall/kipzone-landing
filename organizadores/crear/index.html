@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f5f2">
+  <title>Crear evento | KipZone</title>
+  <meta name="description" content="Publica un social run en KipZone.">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="wizard-page">
+  <header class="wizard-header"><a href="/organizadores/">← Volver</a><strong>KipZone</strong><span>Nuevo evento</span></header>
+  <div class="wizard-progress"><i style="width:100%"></i></div>
+
+  <section id="auth-gate" class="wizard-card auth-card" hidden>
+    <p class="eyebrow">Cuenta del organizador</p><h1>Entra para publicar.</h1><p class="wizard-lead">Usa el mismo correo y contraseña de tu cuenta KipZone.</p>
+    <form id="login-form"><label>Correo electrónico<input id="login-email" type="email" autocomplete="email" required></label><label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label><p id="login-error" class="wizard-message" hidden></p><button id="login-submit" class="button primary auth-submit" type="submit">Entrar</button></form>
+  </section>
+
+  <form id="create-form" class="wizard-card" hidden>
+    <p class="eyebrow">Crea tu social run</p><h1>Publica el próximo encuentro.</h1><p class="wizard-lead">Completa la información que verá la comunidad. Después podrás editarla desde “Mis eventos”.</p>
+
+    <label>Nombre del evento<input id="title" maxlength="80" required placeholder="Ej: Vuelta al Parque"></label>
+    <label>Descripción<textarea id="description" rows="6" maxlength="1800" placeholder="Cuenta de qué se trata, ritmo, distancia y recomendaciones."></textarea><span class="field-count"><b id="description-count">0</b>/1800</span></label>
+    <label>Dirección o punto de encuentro<input id="address" maxlength="220" required placeholder="Ej: Parque Bicentenario, Vitacura"></label>
+
+    <label>Tipo de evento<select id="event-type"><option value="fixed">Evento en una fecha</option><option value="alarm">Actividad recurrente semanal</option></select></label>
+    <div id="fixed-fields" class="coordinate-grid"><label>Fecha<input id="event-date" type="date"></label><label>Hora<input id="event-time" type="time" value="08:00"></label></div>
+    <div id="repeat-fields" hidden>
+      <p class="event-field-label">Días de la semana</p>
+      <div class="weekday-row" aria-label="Días de repetición"><button type="button" data-weekday="1">D</button><button type="button" data-weekday="2">L</button><button type="button" data-weekday="3">M</button><button type="button" data-weekday="4">X</button><button type="button" data-weekday="5">J</button><button type="button" data-weekday="6">V</button><button type="button" data-weekday="7">S</button></div>
+      <label>Hora habitual<input id="repeat-time" type="time" value="08:00"></label>
+    </div>
+
+    <label>Temas o categorías<input id="topics" maxlength="180" placeholder="Running, Caminata, Trail"></label>
+    <label>Link externo de inscripción o pago<input id="payment-link" type="url" inputmode="url" placeholder="https://..."><span class="place-help">La persona pagará directamente al organizador; KipZone no recibe el dinero.</span></label>
+    <div class="profile-photo-grid">
+      <label class="photo-picker square">Flyer cuadrado<input id="flyer" type="file" accept="image/jpeg,image/png,image/webp"><span>Seleccionar imagen · máximo 8 MB</span></label>
+      <label>O pega la URL de una imagen<input id="image-url" type="url" inputmode="url" placeholder="https://..."><span class="place-help">Si eliges un archivo, este tendrá prioridad.</span></label>
+    </div>
+    <label class="toggle-row"><div><b>Mostrar públicamente</b><span>El evento podrá aparecer en la portada de organizadores.</span></div><input id="discoverable" type="checkbox" checked></label>
+    <p id="form-message" class="wizard-message" role="alert" hidden></p>
+    <div class="wizard-actions"><a class="button secondary" href="/organizadores/perfil/">Cancelar</a><button id="create-submit" class="button primary" type="submit">Publicar evento</button></div>
+  </form>
+
+  <section id="success-view" class="wizard-success" hidden><span>✓</span><p class="eyebrow">Evento publicado</p><h1>Ya está en KipZone.</h1><p id="success-copy"></p><a id="success-link" class="button primary" href="/organizadores/perfil/">Ver el evento</a></section>
+  <script type="module" src="create.js"></script>
+</body>
+</html>

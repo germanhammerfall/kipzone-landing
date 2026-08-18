@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f0d">
+  <title>Mis eventos | KipZone</title>
+  <meta name="description" content="Gestiona y edita tus eventos publicados en KipZone.">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="organizer-panel">
+  <div id="panel-loading" class="panel-loading">Conectando con KipZone…</div>
+
+  <main id="login-view" class="organizer-login" hidden>
+    <header class="panel-header"><a class="panel-brand" href="/organizadores/"><img src="../../assets/kipzone-wordmark.svg" alt="KipZone"></a></header>
+    <form id="login-form" class="panel-login-card">
+      <p class="eyebrow">Panel de organizadores</p>
+      <h1>Gestiona tus eventos.</h1>
+      <p>Entra con el mismo correo y contraseña que usas en la aplicación KipZone.</p>
+      <label>Correo electrónico<input id="login-email" type="email" autocomplete="email" required></label>
+      <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p id="login-error" class="panel-message error" role="alert" hidden></p>
+      <button id="login-submit" class="button primary auth-submit" type="submit">Entrar</button>
+      <p class="login-create">¿Aún no tienes cuenta? <a href="https://play.google.com/store/apps/details?id=com.revive.redsocial" target="_blank" rel="noreferrer">Créala en la app</a></p>
+    </form>
+  </main>
+
+  <main id="dashboard-view" hidden>
+    <header class="panel-header">
+      <a class="panel-brand" href="/organizadores/"><img src="../../assets/kipzone-wordmark.svg" alt="KipZone"></a>
+      <nav><a href="/organizadores/">Portada</a><a class="button primary" href="/organizadores/crear/">Crear evento</a><button id="signout" class="panel-signout" type="button">Salir</button></nav>
+    </header>
+    <section class="dashboard-content">
+      <div class="dashboard-heading"><div><p class="eyebrow">Panel de organizadores</p><h2>Mis eventos</h2><p id="account-label">Consulta tus publicaciones, revisa sus datos y edítalas sin cambiar el identificador del evento.</p></div><a class="button primary" href="/organizadores/crear/">Crear un evento</a></div>
+      <div class="dashboard-stats"><article><strong id="stat-total">0</strong><span>Eventos</span></article><article><strong id="stat-upcoming">0</strong><span>Próximos</span></article><article><strong id="stat-people">0</strong><span>Participantes</span></article></div>
+      <div class="event-filters" aria-label="Filtrar eventos"><button class="active" type="button" data-filter="all">Todos</button><button type="button" data-filter="upcoming">Próximos</button><button type="button" data-filter="past">Pasados</button></div>
+      <div id="managed-events" class="managed-events" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>
