@@ -139,24 +139,6 @@ editForm.addEventListener("submit", async (event) => {
   const recurring = eventType.value === "alarm";
   const weekdays = selectedWeekdays();
   const repeatTime = document.getElementById("repeat-time").value;
-  if (recurring !== (eventData.eventType === "alarm")) {
-    message.textContent = "La función segura de edición todavía no permite cambiar un evento fijo a alarma ni viceversa. Debe actualizarse en KipZone.";
-    message.classList.remove("success");
-    message.hidden = false;
-    return;
-  }
-  if (recurring) {
-    const originalWeekdays = Array.isArray(eventData.tmpRepeatWeekdays) ? eventData.tmpRepeatWeekdays.map(Number).sort((a, b) => a - b) : [];
-    const selected = [...weekdays].sort((a, b) => a - b);
-    const originalStart = eventData.tmpRepeatTime?.toDate?.() || eventData.nextStart?.toDate?.() || eventData.startTime?.toDate?.() || null;
-    const originalTime = typeof eventData.tmpRepeatTime === "string" ? eventData.tmpRepeatTime : timeInputValue(originalStart);
-    if (selected.join(",") !== originalWeekdays.join(",") || (originalTime && repeatTime !== originalTime)) {
-      message.textContent = "La función segura de edición todavía no permite cambiar los días u horarios de una alarma existente.";
-      message.classList.remove("success");
-      message.hidden = false;
-      return;
-    }
-  }
   const nextStart = recurring ? nextWeeklyOccurrence(weekdays, repeatTime) : combineDateAndTime(document.getElementById("event-date").value, document.getElementById("event-time").value);
   if (!nextStart || (recurring && !weekdays.length)) {
     message.textContent = recurring ? "Selecciona al menos un día y una hora." : "Selecciona una fecha y hora válidas.";
@@ -179,7 +161,7 @@ editForm.addEventListener("submit", async (event) => {
     return;
   }
   const coordinates = eventCoordinates(eventData);
-  if (!coordinates) {
+  if (!coordinates && eventData.creationSource !== "organizer_web") {
     message.textContent = "Este evento no tiene coordenadas y la función actual de edición necesita una ubicación válida.";
     message.classList.remove("success");
     message.hidden = false;
@@ -211,8 +193,9 @@ editForm.addEventListener("submit", async (event) => {
       title: document.getElementById("title").value.trim(),
       description: document.getElementById("description").value.trim(),
       address: document.getElementById("address").value.trim(),
-      ...coordinates,
+      ...(coordinates || {}),
       startAtMillis: nextStart.getTime(),
+      eventType: recurring ? "alarm" : "fixed",
       topics,
       placeId: String(eventData.placeId || ""),
       radiusKm: Math.max(0.1, Number(eventData.radiusKm) || 1),
@@ -229,6 +212,13 @@ editForm.addEventListener("submit", async (event) => {
       paymentLink: safeHttpUrl(paymentLink),
       bankTransfer: eventData.bankTransfer || null
     };
+    if (recurring) {
+      const [repeatHour, repeatMinute] = repeatTime.split(":").map(Number);
+      payload.repeatWeekdays = weekdays;
+      payload.repeatHour = repeatHour;
+      payload.repeatMinute = repeatMinute;
+      await currentUser.getIdToken(true);
+    }
     await callOrganizerFunction(sdk, "updateGroupEvent", payload);
     const updatedSnapshot = await sdk.getDoc(eventRef);
     if (updatedSnapshot.exists()) eventData = updatedSnapshot.data();
