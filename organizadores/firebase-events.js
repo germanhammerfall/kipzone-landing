@@ -106,7 +106,9 @@ moreButton?.addEventListener("click", () => {
 async function loadEvents() {
   renderState("Cargando eventos…", "Consultando las próximas actividades de KipZone.");
   try {
-    allEvents = await loadPublicEvents();
+    allEvents = (await loadPublicEvents()).sort((first, second) =>
+      second.totalParticipantsCount - first.totalParticipantsCount || first.nextStart - second.nextStart
+    );
     if (!allEvents.length) {
       renderState("Aún no hay próximos eventos públicos.", "El primero que publiques en KipZone aparecerá aquí.");
       return;
@@ -115,6 +117,8 @@ async function loadEvents() {
   } catch (error) {
     console.error("No fue posible cargar los eventos públicos:", error);
     renderState("No pudimos cargar los eventos.", "Intenta nuevamente en unos segundos.", true);
+  } finally {
+    window.dispatchEvent(new Event("kipzone:events-ready"));
   }
 }
 

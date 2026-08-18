@@ -37,7 +37,15 @@ if (scrollDemo) {
 }
 
 const drawTerritoryFrame = (index) => {
-  const image = territoryFrames[index];
+  const nearestReadyFrame = territoryFrames.reduce((closest, candidate, candidateIndex) => {
+    if (!candidate.complete || !candidate.naturalWidth) return closest;
+    return closest < 0 || Math.abs(candidateIndex - index) < Math.abs(closest - index)
+      ? candidateIndex
+      : closest;
+  }, -1);
+  const image = territoryFrames[index]?.complete && territoryFrames[index]?.naturalWidth
+    ? territoryFrames[index]
+    : territoryFrames[nearestReadyFrame];
   if (!scrollCanvas || !scrollContext || !image?.complete || !image.naturalWidth) return;
 
   const sourceRatio = image.naturalWidth / image.naturalHeight;
@@ -78,13 +86,34 @@ const requestTerritorySync = () => {
   if (!scrollFrame) scrollFrame = window.requestAnimationFrame(syncTerritoryAnimation);
 };
 
-territoryFrames.forEach((image, index) => {
-  image.decoding = 'async';
-  image.onload = () => {
-    if (index === wantedFrame || index === 0) requestTerritorySync();
+let territoryFramesStarted = false;
+
+const loadTerritoryFrames = () => {
+  if (territoryFramesStarted || !scrollDemo) return;
+  territoryFramesStarted = true;
+  const mobile = window.matchMedia('(max-width: 700px)').matches;
+  const pending = territoryFrames
+    .map((_, index) => index)
+    .filter((index) => !mobile || index % 3 === 0 || index === territoryFrames.length - 1);
+  const batchSize = mobile ? 3 : 6;
+
+  const loadBatch = () => {
+    pending.splice(0, batchSize).forEach((index) => {
+      const image = territoryFrames[index];
+      image.decoding = 'async';
+      image.onload = () => {
+        if (index === wantedFrame || index === 0 || mobile) requestTerritorySync();
+      };
+      image.src = `assets/territory-frames-360/frame-${String(index + 1).padStart(3, '0')}.webp`;
+    });
+    if (pending.length) window.setTimeout(loadBatch, mobile ? 90 : 35);
   };
-  image.src = `assets/territory-frames-360/frame-${String(index + 1).padStart(3, '0')}.webp`;
-});
+
+  loadBatch();
+};
+
+window.addEventListener('kipzone:events-ready', loadTerritoryFrames, { once: true });
+window.setTimeout(loadTerritoryFrames, 8000);
 
 window.addEventListener('scroll', requestTerritorySync, { passive: true });
 window.addEventListener('resize', requestTerritorySync);

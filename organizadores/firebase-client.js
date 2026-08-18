@@ -1,4 +1,5 @@
 const SDK_VERSION = "10.14.1";
+const PUBLIC_EVENTS_URL = "https://us-central1-red-social-1cn89d.cloudfunctions.net/publicEventsFeed";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE",
@@ -131,9 +132,24 @@ export function normalizeEvent(id, data) {
 }
 
 export async function loadPublicEvents() {
-  const sdk = await getFirebase();
-  const response = await sdk.httpsCallable(sdk.functions, "publicEventsFeed")({});
-  return (response.data?.events || [])
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), 15000);
+  let payload;
+  try {
+    const response = await fetch(PUBLIC_EVENTS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: {} }),
+      signal: controller.signal
+    });
+    payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+    }
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
+  return (payload.result?.events || payload.data?.events || [])
     .map((raw) => normalizeEvent(raw.id, { ...raw, nextStart: Number(raw.nextStartMillis) }))
     .filter((event) => event?.nextStart)
     .sort((a, b) => a.nextStart - b.nextStart);
