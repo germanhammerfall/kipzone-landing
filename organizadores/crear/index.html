@@ -13,8 +13,8 @@
   <div class="wizard-progress"><i style="width:100%"></i></div>
 
   <section id="auth-gate" class="wizard-card auth-card" hidden>
-    <p class="eyebrow">Cuenta del organizador</p><h1>Entra para publicar.</h1><p class="wizard-lead">Usa el mismo correo y contraseña de tu cuenta KipZone.</p>
-    <form id="login-form"><label>Correo electrónico<input id="login-email" type="email" autocomplete="email" required></label><label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label><p id="login-error" class="wizard-message" hidden></p><button id="login-submit" class="button primary auth-submit" type="submit">Entrar</button></form>
+    <p class="eyebrow">Cuenta del organizador</p><h1>Entra para publicar.</h1><p class="wizard-lead">Usa tu cuenta de Google o el correo y contraseña de KipZone.</p>
+    <form id="login-form"><button id="google-login" class="google-button" type="button">Continuar con Google</button><div class="auth-divider" aria-hidden="true">o usa tu correo</div><label>Correo electrónico<input id="login-email" type="email" autocomplete="email" required></label><label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label><p id="login-error" class="wizard-message" hidden></p><button id="login-submit" class="button primary auth-submit" type="submit">Entrar</button></form>
   </section>
 
   <form id="create-form" class="wizard-card" hidden>

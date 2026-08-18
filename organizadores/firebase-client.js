@@ -37,6 +37,12 @@ export function getFirebase() {
   return sdkPromise;
 }
 
+export function signInWithGoogle(sdk) {
+  const provider = new sdk.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  return sdk.signInWithPopup(sdk.auth, provider);
+}
+
 export function asDate(value) {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
@@ -159,6 +165,17 @@ export function nextWeeklyOccurrence(weekdays, timeValue) {
 
 export function authMessage(error) {
   const code = String(error?.code || "");
+  if (code.includes("unauthorized-domain")) {
+    return `Este dominio no está autorizado en Firebase Authentication: ${globalThis.location?.hostname || "dominio actual"}.`;
+  }
+  if (code.includes("operation-not-allowed")) return "El acceso con Google todavía no está habilitado en Firebase Authentication.";
+  if (code.includes("popup-blocked")) return "El navegador bloqueó la ventana de Google. Permite las ventanas emergentes e inténtalo otra vez.";
+  if (code.includes("popup-closed-by-user") || code.includes("cancelled-popup-request")) {
+    return "La ventana de Google se cerró antes de completar el ingreso.";
+  }
+  if (code.includes("account-exists-with-different-credential")) {
+    return "Esta cuenta ya existe con otro método de acceso. Ingresa con el método que usaste originalmente.";
+  }
   if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
     return "El correo o la contraseña no son correctos.";
   }

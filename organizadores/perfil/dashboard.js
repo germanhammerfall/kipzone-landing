@@ -1,4 +1,4 @@
-import { authMessage, formatEventDate, getFirebase, normalizeEvent } from "../firebase-client.js";
+import { authMessage, formatEventDate, getFirebase, normalizeEvent, signInWithGoogle } from "../firebase-client.js";
 
 const loading = document.getElementById("panel-loading");
 const loginView = document.getElementById("login-view");
@@ -6,6 +6,7 @@ const dashboardView = document.getElementById("dashboard-view");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const loginSubmit = document.getElementById("login-submit");
+const googleLogin = document.getElementById("google-login");
 const eventsRoot = document.getElementById("managed-events");
 let sdk;
 let allEvents = [];
@@ -144,6 +145,21 @@ loginForm.addEventListener("submit", async (event) => {
   } finally {
     loginSubmit.disabled = false;
     loginSubmit.textContent = "Entrar";
+  }
+});
+
+googleLogin.addEventListener("click", async () => {
+  loginError.hidden = true;
+  googleLogin.disabled = true;
+  googleLogin.textContent = "Conectando con Google…";
+  try {
+    await signInWithGoogle(sdk);
+  } catch (error) {
+    loginError.textContent = authMessage(error);
+    loginError.hidden = false;
+  } finally {
+    googleLogin.disabled = false;
+    googleLogin.textContent = "Continuar con Google";
   }
 });
 
