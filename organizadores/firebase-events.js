@@ -1,4 +1,4 @@
-import { loadPublicEvents } from "./firebase-client.js";
+import { loadPublicEvents } from "./firebase-client.js?v=20260818-mobile-events";
 
 const grid = document.getElementById("events-grid");
 const moreButton = document.getElementById("events-more");
