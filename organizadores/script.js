@@ -75,7 +75,7 @@ const syncHeroAnimation = () => {
   if (!heroSection || !heroCanvas || !heroContext) return;
 
   const rect = heroSection.getBoundingClientRect();
-  const travel = Math.max(1, heroSection.offsetHeight - window.innerHeight * .35);
+  const travel = Math.max(120, Math.min(heroSection.offsetHeight, window.innerHeight) * .24);
   const progress = reducedMotion.matches ? 0 : Math.min(1, Math.max(0, -rect.top / travel));
 
   heroWantedFrame = Math.round(progress * (territoryFrames.length - 1));
