@@ -1,4 +1,4 @@
-import { authMessage, combineDateAndTime, dateInputValue, eventBelongsToUser, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js";
+import { authMessage, callOrganizerFunction, combineDateAndTime, dateInputValue, eventBelongsToUser, eventCoordinates, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js";
 
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";
 const loading = document.getElementById("edit-loading");
@@ -46,7 +46,7 @@ function fillForm(data) {
   document.getElementById("address").value = data.address || "";
   document.getElementById("topics").value = Array.isArray(data.topics) ? data.topics.join(", ") : "";
   document.getElementById("payment-link").value = data.paymentLink || "";
-  document.getElementById("image-url").value = data.imagen || data.photo || "";
+  document.getElementById("image-url").value = data.imageUrl || data.imagen || data.photo || data.image || "";
   document.getElementById("status").value = data.status === "Inactivo" ? "Inactivo" : "Activo";
   document.getElementById("discoverable").checked = data.discoverable !== false;
   eventType.value = data.eventType === "alarm" ? "alarm" : "fixed";
@@ -90,7 +90,7 @@ async function uploadReplacement() {
   if (!file.type.startsWith("image/")) throw new Error("invalid-image");
   if (file.size > 8 * 1024 * 1024) throw new Error("image-too-large");
   const extension = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
-  const target = sdk.ref(sdk.storage, `run_events/${currentUser.uid}/${eventId}/flyer-${Date.now()}.${extension}`);
+  const target = sdk.ref(sdk.storage, `users/${currentUser.uid}/event-flyers/${eventId}/flyer-${Date.now()}.${extension}`);
   await sdk.uploadBytes(target, file, { contentType: file.type, cacheControl: "public,max-age=31536000" });
   return sdk.getDownloadURL(target);
 }
@@ -139,6 +139,24 @@ editForm.addEventListener("submit", async (event) => {
   const recurring = eventType.value === "alarm";
   const weekdays = selectedWeekdays();
   const repeatTime = document.getElementById("repeat-time").value;
+  if (recurring !== (eventData.eventType === "alarm")) {
+    message.textContent = "La función segura de edición todavía no permite cambiar un evento fijo a alarma ni viceversa. Debe actualizarse en KipZone.";
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  if (recurring) {
+    const originalWeekdays = Array.isArray(eventData.tmpRepeatWeekdays) ? eventData.tmpRepeatWeekdays.map(Number).sort((a, b) => a - b) : [];
+    const selected = [...weekdays].sort((a, b) => a - b);
+    const originalStart = eventData.tmpRepeatTime?.toDate?.() || eventData.nextStart?.toDate?.() || eventData.startTime?.toDate?.() || null;
+    const originalTime = typeof eventData.tmpRepeatTime === "string" ? eventData.tmpRepeatTime : timeInputValue(originalStart);
+    if (selected.join(",") !== originalWeekdays.join(",") || (originalTime && repeatTime !== originalTime)) {
+      message.textContent = "La función segura de edición todavía no permite cambiar los días u horarios de una alarma existente.";
+      message.classList.remove("success");
+      message.hidden = false;
+      return;
+    }
+  }
   const nextStart = recurring ? nextWeeklyOccurrence(weekdays, repeatTime) : combineDateAndTime(document.getElementById("event-date").value, document.getElementById("event-time").value);
   if (!nextStart || (recurring && !weekdays.length)) {
     message.textContent = recurring ? "Selecciona al menos un día y una hora." : "Selecciona una fecha y hora válidas.";
@@ -147,8 +165,38 @@ editForm.addEventListener("submit", async (event) => {
     return;
   }
   const paymentLink = document.getElementById("payment-link").value.trim();
-  if (paymentLink && !safeHttpUrl(paymentLink)) {
-    message.textContent = "El link de inscripción debe comenzar con http:// o https://";
+  if (paymentLink && !safeHttpUrl(paymentLink).startsWith("https://")) {
+    message.textContent = "El link de inscripción debe comenzar con https://";
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  const topics = [...new Set(document.getElementById("topics").value.split(",").map((topic) => topic.trim()).filter(Boolean))].slice(0, 20);
+  if (topics.length < 3) {
+    message.textContent = "Selecciona al menos 3 temas separados por coma, como Running, Comunidad y Deporte.";
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  const coordinates = eventCoordinates(eventData);
+  if (!coordinates) {
+    message.textContent = "Este evento no tiene coordenadas y la función actual de edición necesita una ubicación válida.";
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  const currentStatus = eventData.status === "Inactivo" ? "Inactivo" : "Activo";
+  if (document.getElementById("status").value !== currentStatus) {
+    message.textContent = "La función segura de edición todavía no permite cambiar el estado del evento.";
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  const ticketingEnabled = eventData.ticketingEnabled === true;
+  const paidRegistration = eventData.isPaidRegistration === true || eventData.paidRegistrationEnabled === true ||
+    (ticketingEnabled && eventData.ticketPlan !== "free_only");
+  if (paymentLink && !paidRegistration) {
+    message.textContent = "La función actual solo permite links en eventos con inscripción pagada ya configurada.";
     message.classList.remove("success");
     message.hidden = false;
     return;
@@ -158,34 +206,33 @@ editForm.addEventListener("submit", async (event) => {
   saveButton.textContent = "Guardando…";
   try {
     const image = await uploadReplacement();
-    const timestamp = sdk.Timestamp.fromDate(nextStart);
-    const updates = {
+    const payload = {
+      eventId,
       title: document.getElementById("title").value.trim(),
       description: document.getElementById("description").value.trim(),
       address: document.getElementById("address").value.trim(),
-      topics: document.getElementById("topics").value.split(",").map((topic) => topic.trim()).filter(Boolean).slice(0, 10),
-      paymentLink: safeHttpUrl(paymentLink),
-      imagen: image,
-      photo: image,
-      eventType: recurring ? "alarm" : "fixed",
-      nextStart: timestamp,
-      startDate: timestamp,
-      status: document.getElementById("status").value,
+      ...coordinates,
+      startAtMillis: nextStart.getTime(),
+      topics,
+      placeId: String(eventData.placeId || ""),
+      radiusKm: Math.max(0.1, Number(eventData.radiusKm) || 1),
+      imageUrl: image,
       discoverable: document.getElementById("discoverable").checked,
-      updatedAt: sdk.serverTimestamp()
+      ticketingEnabled,
+      ticketPlan: String(eventData.ticketPlan || "free_only"),
+      ticketCapacity: Math.max(0, Number(eventData.ticketCapacity) || 0),
+      freeTicketLimit: Math.max(0, Number(eventData.freeTicketLimit) || 0),
+      isPaidRegistration: paidRegistration,
+      registrationPrice: Math.max(0, Number(eventData.registrationPrice) || 0),
+      registrationCurrency: String(eventData.registrationCurrency || "CLP"),
+      paymentMethod: eventData.paymentMethod === "transfer" ? "transfer" : "mercadopago",
+      paymentLink: safeHttpUrl(paymentLink),
+      bankTransfer: eventData.bankTransfer || null
     };
-    if (recurring) {
-      updates.tmpRepeatWeekdays = weekdays;
-      updates.tmpRepeatTime = repeatTime;
-      updates.tmpRepeatDates = [];
-    } else {
-      updates.tmpRepeatWeekdays = sdk.deleteField();
-      updates.tmpRepeatTime = sdk.deleteField();
-      updates.tmpRepeatDates = sdk.deleteField();
-    }
-    await sdk.updateDoc(eventRef, updates);
-    eventData = { ...eventData, ...updates };
-    document.getElementById("event-heading").textContent = updates.title;
+    await callOrganizerFunction(sdk, "updateGroupEvent", payload);
+    const updatedSnapshot = await sdk.getDoc(eventRef);
+    if (updatedSnapshot.exists()) eventData = updatedSnapshot.data();
+    document.getElementById("event-heading").textContent = payload.title;
     message.textContent = "Cambios guardados correctamente en Firebase.";
     message.classList.add("success");
     message.hidden = false;

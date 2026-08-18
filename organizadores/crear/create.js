@@ -1,4 +1,4 @@
-import { authMessage, combineDateAndTime, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle } from "../firebase-client.js";
+import { authMessage, callOrganizerFunction, combineDateAndTime, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle } from "../firebase-client.js";
 
 const authGate = document.getElementById("auth-gate");
 const createForm = document.getElementById("create-form");
@@ -28,13 +28,13 @@ function toggleType() {
   document.getElementById("repeat-fields").hidden = !recurring;
 }
 
-async function uploadFlyer(user, eventId) {
+async function uploadFlyer(user, requestId) {
   const file = document.getElementById("flyer").files[0];
   if (!file) return safeHttpUrl(document.getElementById("image-url").value);
   if (!file.type.startsWith("image/")) throw new Error("invalid-image");
   if (file.size > 8 * 1024 * 1024) throw new Error("image-too-large");
   const extension = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
-  const target = sdk.ref(sdk.storage, `run_events/${user.uid}/${eventId}/flyer-${Date.now()}.${extension}`);
+  const target = sdk.ref(sdk.storage, `users/${user.uid}/event-flyers/${requestId}/flyer-${Date.now()}.${extension}`);
   await sdk.uploadBytes(target, file, { contentType: file.type, cacheControl: "public,max-age=31536000" });
   return sdk.getDownloadURL(target);
 }
@@ -105,43 +105,48 @@ createForm.addEventListener("submit", async (event) => {
     formMessage.hidden = false;
     return;
   }
+  if (paymentLink) {
+    formMessage.textContent = "La publicación segura solo admite links cuando la inscripción pagada se configura desde la app.";
+    formMessage.hidden = false;
+    return;
+  }
+  const topics = [...new Set(document.getElementById("topics").value.split(",").map((topic) => topic.trim()).filter(Boolean))].slice(0, 20);
+  if (topics.length < 3) {
+    formMessage.textContent = "Selecciona al menos 3 temas separados por coma, como Running, Comunidad y Deporte.";
+    formMessage.hidden = false;
+    return;
+  }
 
   submitButton.disabled = true;
   submitButton.textContent = "Publicando…";
   try {
-    const eventRef = sdk.doc(sdk.collection(sdk.db, "run_events"));
-    const image = await uploadFlyer(currentUser, eventRef.id);
-    const timestamp = sdk.Timestamp.fromDate(nextStart);
-    const topics = document.getElementById("topics").value.split(",").map((topic) => topic.trim()).filter(Boolean).slice(0, 10);
+    const requestId = crypto.randomUUID();
+    const image = await uploadFlyer(currentUser, requestId);
     const payload = {
+      requestId,
       title: document.getElementById("title").value.trim(),
       description: document.getElementById("description").value.trim(),
       address: document.getElementById("address").value.trim(),
-      startDate: timestamp,
-      nextStart: timestamp,
-      eventType: recurring ? "alarm" : "fixed",
-      status: "Activo",
       discoverable: document.getElementById("discoverable").checked,
-      participantsCount: 0,
       topics,
-      paymentLink: safeHttpUrl(paymentLink),
-      photo: image,
-      imagen: image,
-      ownerUid: currentUser.uid,
-      creatorUid: currentUser.uid,
-      uid: currentUser.uid,
-      userRef: sdk.doc(sdk.db, "users", currentUser.uid),
-      createdAt: sdk.serverTimestamp(),
-      updatedAt: sdk.serverTimestamp()
+      imageUrl: image,
+      creationSource: "organizer_web",
+      isRepeating: recurring,
+      isPaidRegistration: false,
+      workOutList: []
     };
     if (recurring) {
-      payload.tmpRepeatWeekdays = weekdays;
-      payload.tmpRepeatTime = time;
-      payload.tmpRepeatDates = [];
+      const [repeatHour, repeatMinute] = time.split(":").map(Number);
+      payload.repeatWeekdays = weekdays;
+      payload.repeatHour = repeatHour;
+      payload.repeatMinute = repeatMinute;
+      await currentUser.getIdToken(true);
+    } else {
+      payload.startAtMillis = nextStart.getTime();
     }
-    await sdk.setDoc(eventRef, payload);
+    const result = await callOrganizerFunction(sdk, "publishGroupEvent", payload);
     document.getElementById("success-copy").textContent = `${payload.title} quedó guardado en Firebase y ya puedes administrarlo desde Mis eventos.`;
-    document.getElementById("success-link").href = `/eventos/detalle/?id=${encodeURIComponent(eventRef.id)}`;
+    document.getElementById("success-link").href = `/eventos/detalle/?id=${encodeURIComponent(result.eventId)}`;
     showOnly(successView);
   } catch (error) {
     console.error("No fue posible crear el evento:", error);

@@ -20,19 +20,19 @@
   <form id="create-form" class="wizard-card" hidden>
     <p class="eyebrow">Crea tu social run</p><h1>Publica el próximo encuentro.</h1><p class="wizard-lead">Completa la información que verá la comunidad. Después podrás editarla desde “Mis eventos”.</p>
 
-    <label>Nombre del evento<input id="title" maxlength="80" required placeholder="Ej: Vuelta al Parque"></label>
-    <label>Descripción<textarea id="description" rows="6" maxlength="1800" placeholder="Cuenta de qué se trata, ritmo, distancia y recomendaciones."></textarea><span class="field-count"><b id="description-count">0</b>/1800</span></label>
-    <label>Dirección o punto de encuentro<input id="address" maxlength="220" required placeholder="Ej: Parque Bicentenario, Vitacura"></label>
+    <label>Nombre del evento<input id="title" minlength="5" maxlength="80" required placeholder="Ej: Vuelta al Parque"></label>
+    <label>Descripción<textarea id="description" rows="6" minlength="20" maxlength="1200" required placeholder="Cuenta de qué se trata, ritmo, distancia y recomendaciones."></textarea><span class="field-count"><b id="description-count">0</b>/1200</span></label>
+    <label>Dirección o punto de encuentro<input id="address" minlength="3" maxlength="220" required placeholder="Ej: Parque Bicentenario, Vitacura"></label>
 
     <label>Tipo de evento<select id="event-type"><option value="fixed">Evento en una fecha</option><option value="alarm">Actividad recurrente semanal</option></select></label>
     <div id="fixed-fields" class="coordinate-grid"><label>Fecha<input id="event-date" type="date"></label><label>Hora<input id="event-time" type="time" value="08:00"></label></div>
     <div id="repeat-fields" hidden>
       <p class="event-field-label">Días de la semana</p>
-      <div class="weekday-row" aria-label="Días de repetición"><button type="button" data-weekday="1">D</button><button type="button" data-weekday="2">L</button><button type="button" data-weekday="3">M</button><button type="button" data-weekday="4">X</button><button type="button" data-weekday="5">J</button><button type="button" data-weekday="6">V</button><button type="button" data-weekday="7">S</button></div>
+      <div class="weekday-row" aria-label="Días de repetición"><button type="button" data-weekday="7">D</button><button type="button" data-weekday="1">L</button><button type="button" data-weekday="2">M</button><button type="button" data-weekday="3">X</button><button type="button" data-weekday="4">J</button><button type="button" data-weekday="5">V</button><button type="button" data-weekday="6">S</button></div>
       <label>Hora habitual<input id="repeat-time" type="time" value="08:00"></label>
     </div>
 
-    <label>Temas o categorías<input id="topics" maxlength="180" placeholder="Running, Caminata, Trail"></label>
+    <label>Temas o categorías<input id="topics" maxlength="180" required placeholder="Running, Comunidad, Deporte"><span class="place-help">Agrega al menos 3 temas separados por coma.</span></label>
     <label>Link externo de inscripción o pago<input id="payment-link" type="url" inputmode="url" placeholder="https://..."><span class="place-help">La persona pagará directamente al organizador; KipZone no recibe el dinero.</span></label>
     <div class="profile-photo-grid">
       <label class="photo-picker square">Flyer cuadrado<input id="flyer" type="file" accept="image/jpeg,image/png,image/webp"><span>Seleccionar imagen · máximo 8 MB</span></label>

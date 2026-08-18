@@ -43,6 +43,16 @@ export function signInWithGoogle(sdk) {
   return sdk.signInWithPopup(sdk.auth, provider);
 }
 
+export async function callOrganizerFunction(sdk, name, payload) {
+  const response = await sdk.httpsCallable(sdk.functions, name)(payload);
+  if (response.data?.ok !== true) {
+    const error = new Error("La función de KipZone no confirmó la operación.");
+    error.code = "functions/internal";
+    throw error;
+  }
+  return response.data;
+}
+
 export function asDate(value) {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
@@ -75,6 +85,15 @@ export function eventOwnerId(data) {
 export function eventBelongsToUser(data, uid) {
   const ownerUid = eventOwnerId(data);
   return Boolean(ownerUid && uid && ownerUid === String(uid));
+}
+
+export function eventCoordinates(data) {
+  const latitude = data?.center?.latitude ?? data?.latitude ?? data?.centerLat;
+  const longitude = data?.center?.longitude ?? data?.longitude ?? data?.centerLng;
+  if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) return null;
+  const result = { latitude: Number(latitude), longitude: Number(longitude) };
+  return Number.isFinite(result.latitude) && result.latitude >= -90 && result.latitude <= 90 &&
+    Number.isFinite(result.longitude) && result.longitude >= -180 && result.longitude <= 180 ? result : null;
 }
 
 export function normalizeEvent(id, data) {
@@ -162,14 +181,15 @@ export function nextWeeklyOccurrence(weekdays, timeValue) {
     const candidate = new Date(now);
     candidate.setDate(now.getDate() + offset);
     candidate.setHours(hours, minutes, 0, 0);
-    const appWeekday = candidate.getDay() + 1;
-    if (selected.includes(appWeekday) && candidate > now) return candidate;
+    const isoWeekday = candidate.getDay() === 0 ? 7 : candidate.getDay();
+    if (selected.includes(isoWeekday) && candidate > now) return candidate;
   }
   return null;
 }
 
 export function authMessage(error) {
   const code = String(error?.code || "");
+  const detail = String(error?.message || "").trim();
   if (code.includes("unauthorized-domain")) {
     return `Este dominio no está autorizado en Firebase Authentication: ${globalThis.location?.hostname || "dominio actual"}.`;
   }
@@ -186,6 +206,12 @@ export function authMessage(error) {
   }
   if (code.includes("too-many-requests")) return "Demasiados intentos. Espera unos minutos e inténtalo otra vez.";
   if (code.includes("network-request-failed")) return "No pudimos conectar con Firebase. Revisa tu conexión.";
-  if (code.includes("permission-denied")) return "Firebase no autorizó esta operación para tu cuenta.";
+  if (code.includes("permission-denied") && /Kipzone Pro|Premium|premium/i.test(detail)) {
+    return "Tu suscripción Premium debe estar verificada por KipZone antes de crear una alarma.";
+  }
+  if (code.includes("permission-denied")) return detail || "Firebase no autorizó esta operación para tu cuenta.";
+  if (code.includes("invalid-argument") || code.includes("failed-precondition") || code.includes("not-found")) {
+    return detail || "Los datos enviados no cumplen las validaciones de KipZone.";
+  }
   return "No pudimos completar la operación. Inténtalo nuevamente.";
 }
