@@ -1,11 +1,4 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE",
-  authDomain: "red-social-1cn89d.firebaseapp.com",
-  projectId: "red-social-1cn89d",
-  storageBucket: "red-social-1cn89d.firebasestorage.app",
-  messagingSenderId: "989094287116",
-  appId: "1:989094287116:web:c093e38442ba31030d9b29"
-};
+import { loadPublicEvents } from "./firebase-client.js";
 
 const grid = document.getElementById("events-grid");
 const moreButton = document.getElementById("events-more");
@@ -17,30 +10,6 @@ function element(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
-}
-
-function normalize(raw) {
-  const nextStart = new Date(Number(raw.nextStartMillis));
-  if (!raw.id || !raw.title || Number.isNaN(nextStart.getTime())) return null;
-  return {
-    id: String(raw.id),
-    title: String(raw.title),
-    description: String(raw.description || ""),
-    address: String(raw.address || "Lugar por confirmar"),
-    image: String(raw.image || ""),
-    topics: Array.isArray(raw.topics) ? raw.topics.map(String) : [],
-    nextStart,
-    eventType: raw.eventType === "alarm" ? "alarm" : "fixed",
-    participantsCount: Math.max(0, Number(raw.participantsCount) || 0),
-    isPaid: raw.isPaidRegistration === true,
-    price: Math.max(0, Number(raw.registrationPrice) || 0),
-    paymentLink: String(raw.paymentLink || ""),
-    ticketingEnabled: raw.ticketingEnabled === true,
-    ticketCapacity: Math.max(0, Number(raw.ticketCapacity) || 0),
-    ticketsIssuedCount: Math.max(0, Number(raw.ticketsIssuedCount) || 0),
-    soldOut: raw.soldOut === true,
-    freeRemaining: Math.max(0, Number(raw.freeRemaining) || 0)
-  };
 }
 
 function renderState(title, message, retry = false) {
@@ -88,7 +57,7 @@ function render() {
     );
     if (event.description) body.append(element("p", "event-description", event.description));
 
-    const registeredCount = event.ticketingEnabled ? event.ticketsIssuedCount : event.participantsCount;
+    const registeredCount = event.totalParticipantsCount;
     const availability = event.soldOut
       ? "Entradas agotadas"
       : event.freeRemaining > 0
@@ -105,14 +74,14 @@ function render() {
 
     const actions = element("div", "event-actions");
     const details = element("a", "button primary", "Ver evento");
-    details.href = `https://kipzone-landing.germancarrasco.chatgpt.site/eventos/detalle?id=${encodeURIComponent(event.id)}`;
+    details.href = `/eventos/detalle/?id=${encodeURIComponent(event.id)}`;
     actions.append(details);
     if (event.ticketingEnabled) {
       if (event.soldOut) {
         actions.append(element("span", "button secondary event-sold-out", "Entradas agotadas"));
       } else {
         const registration = element("a", "button secondary", "Inscribirme");
-        registration.href = `https://kipzone-landing.germancarrasco.chatgpt.site/eventos/inscripcion?id=${encodeURIComponent(event.id)}`;
+        registration.href = `/eventos/inscripcion/?id=${encodeURIComponent(event.id)}`;
         actions.append(registration);
       }
     } else if (event.paymentLink) {
@@ -137,15 +106,7 @@ moreButton?.addEventListener("click", () => {
 async function loadEvents() {
   renderState("Cargando eventos…", "Consultando las próximas actividades de KipZone.");
   try {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
-    const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js");
-    const app = initializeApp(firebaseConfig);
-    const functions = getFunctions(app, "us-central1");
-    const response = await httpsCallable(functions, "publicEventsFeed")({});
-    allEvents = (response.data?.events || [])
-      .map(normalize)
-      .filter(Boolean)
-      .sort((a, b) => a.nextStart - b.nextStart);
+    allEvents = await loadPublicEvents();
     if (!allEvents.length) {
       renderState("Aún no hay próximos eventos públicos.", "El primero que publiques en KipZone aparecerá aquí.");
       return;

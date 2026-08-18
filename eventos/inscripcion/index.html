@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Inscripción | KipZone</title>
+</head>
+<body>
+  <p>Abriendo la inscripción del evento…</p>
+  <script>
+    const id = new URLSearchParams(location.search).get("id") || "";
+    location.replace(`/e/?id=${encodeURIComponent(id)}`);
+  </script>
+</body>
+</html>
