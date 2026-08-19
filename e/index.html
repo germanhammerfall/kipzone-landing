@@ -318,6 +318,37 @@ async function submitRegistration(ev){
     const id=registrationId(auth.uid,eventData.start);
     const saved=JSON.parse(localStorage.getItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start))||'null');
     if(saved&&saved.token){renderSuccess(saved.id,saved.token,fullName);return;}
+    // Ya inscrito, pero desde otro dispositivo.
+    //
+    // El id del documento es determinista (uid + inicio de la ocurrencia) y el
+    // uid lo fija el numero de telefono, asi que quien se inscribio en el PC y
+    // abre el enlace en el movil apunta al MISMO documento. Sin esta consulta
+    // el POST de mas abajo deja de ser un create y Firestore lo evalua como
+    // update, que solo permite el organizador: 403, y la pagina lo traducia a
+    // "la inscripcion todavia no esta habilitada para este evento", que hacia
+    // pensar en un problema de configuracion del evento.
+    //
+    // No es un caso raro: es lo que pasa siempre que alguien se inscribe en un
+    // sitio y quiere su QR en otro, que es justo lo que necesita al llegar a
+    // la corrida. localStorage no cubre eso porque vive en un solo navegador.
+    //
+    // Las reglas permiten leer la inscripcion propia (allow get exige que
+    // authUid coincida con el uid del token), asi que el QR se recupera del
+    // servidor. Si la lectura falla da igual el motivo -no existe, o el token
+    // todavia no vale-: se sigue al create de siempre.
+    try{
+      const existing=await jsonFetch(registrationUrl(id),{
+        headers:{'Authorization':'Bearer '+auth.idToken}
+      });
+      const existingToken=val(existing.fields&&existing.fields.personalQrToken);
+      if(existingToken){
+        const existingName=val(existing.fields.fullName)||fullName;
+        localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),
+          JSON.stringify({id:id,token:existingToken}));
+        renderSuccess(id,existingToken,existingName);
+        return;
+      }
+    }catch(_){}
     const token=randomToken();
     const fields={
       fullName:fieldString(fullName),phone:fieldString(phone),rut:fieldString(rut),
