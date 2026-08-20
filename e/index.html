@@ -54,6 +54,10 @@
   .success{text-align:center}.check{width:58px;height:58px;border-radius:50%;background:var(--accent);
     color:#06120C;display:grid;place-items:center;font-size:30px;font-weight:900;margin:0 auto 15px}
   .success strong{display:block;font-size:23px;margin-bottom:8px}.success p{max-width:330px;margin:0 auto}
+  .receipt-summary{text-align:left;margin:20px 0 4px;padding:16px;background:var(--surface2);border:1px solid var(--line);border-radius:14px}
+  .receipt-row{display:flex;gap:10px;align-items:flex-start;color:var(--text);font-size:13px;line-height:1.45;margin-top:12px}
+  .receipt-row:first-child{margin-top:0}.receipt-label{display:block;color:var(--soft);font-size:10px;letter-spacing:.7px;text-transform:uppercase;margin-bottom:3px}
+  .receipt-download{margin-top:18px}
   .personal-qr{background:#fff;border-radius:18px;padding:18px;width:max-content;max-width:100%;
     margin:20px auto 10px}.personal-qr img,.personal-qr canvas{display:block;max-width:100%}
   .code{font-size:11px;letter-spacing:1.2px;color:var(--soft);text-align:center;margin-top:8px}
@@ -372,17 +376,97 @@ async function submitRegistration(ev){
     button.disabled=false;button.textContent='Confirmar mi inscripción';
   }
 }
+function receiptLines(context,text,maxWidth){
+  const words=String(text||'').trim().split(/\s+/).filter(Boolean);
+  const lines=[];let current='';
+  for(const word of words){
+    const candidate=current?current+' '+word:word;
+    if(current&&context.measureText(candidate).width>maxWidth){lines.push(current);current=word;}
+    else current=candidate;
+  }
+  if(current)lines.push(current);
+  return lines;
+}
+function receiptText(context,text,x,y,maxWidth,lineHeight,maxLines){
+  const lines=receiptLines(context,text,maxWidth).slice(0,maxLines||5);
+  for(let i=0;i<lines.length;i++)context.fillText(lines[i],x,y+i*lineHeight);
+  return y+lines.length*lineHeight;
+}
+function receiptDateParts(){
+  return {
+    date:eventData.start.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),
+    time:eventData.start.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})
+  };
+}
+async function downloadReceipt(name){
+  const qr=document.querySelector('#personal-qr canvas')||document.querySelector('#personal-qr img');
+  if(!qr){window.alert('No pudimos preparar tu código QR. Inténtalo nuevamente.');return;}
+  if(qr.tagName==='IMG'&&!qr.complete&&qr.decode)await qr.decode();
+  const canvas=document.createElement('canvas');
+  canvas.width=1080;canvas.height=1520;
+  const context=canvas.getContext('2d'),date=receiptDateParts();
+  context.fillStyle='#0A0E0C';context.fillRect(0,0,canvas.width,canvas.height);
+  context.fillStyle='#151C18';context.fillRect(55,55,970,1410);
+  context.fillStyle='#35D07F';context.font='800 54px Arial,sans-serif';
+  context.fillText('KipZone',104,150);
+  context.font='700 22px Arial,sans-serif';context.fillStyle='#9AA79F';
+  context.fillText('COMPROBANTE DE INSCRIPCIÓN',104,202);
+  context.fillStyle='#F2F5F3';context.font='800 56px Arial,sans-serif';
+  let y=receiptText(context,eventData.title,104,305,870,66,2)+42;
+  context.fillStyle='#35D07F';context.font='700 23px Arial,sans-serif';
+  context.fillText('PARTICIPANTE',104,y);y+=43;
+  context.fillStyle='#F2F5F3';context.font='700 39px Arial,sans-serif';
+  y=receiptText(context,name,104,y,870,48,2)+32;
+  context.fillStyle='#35D07F';context.font='700 23px Arial,sans-serif';
+  context.fillText('FECHA Y HORA',104,y);y+=43;
+  context.fillStyle='#F2F5F3';context.font='600 31px Arial,sans-serif';
+  y=receiptText(context,date.date+' · '+date.time,104,y,870,39,2)+31;
+  if(eventData.address){
+    context.fillStyle='#35D07F';context.font='700 23px Arial,sans-serif';
+    context.fillText('DIRECCIÓN',104,y);y+=43;
+    context.fillStyle='#F2F5F3';context.font='500 29px Arial,sans-serif';
+    y=receiptText(context,eventData.address,104,y,870,37,3)+25;
+  }
+  const qrSize=Math.max(290,Math.min(410,1360-y));
+  const qrX=(canvas.width-qrSize)/2,qrY=Math.min(y+22,1010);
+  context.fillStyle='#FFFFFF';context.fillRect(qrX-24,qrY-24,qrSize+48,qrSize+48);
+  context.drawImage(qr,qrX,qrY,qrSize,qrSize);
+  context.textAlign='center';context.fillStyle='#9AA79F';
+  context.font='600 20px Arial,sans-serif';
+  context.fillText(eventData.checkIn?'PRESENTA ESTE QR AL LLEGAR':'TU INSCRIPCIÓN ESTÁ CONFIRMADA',canvas.width/2,Math.min(qrY+qrSize+78,1430));
+  const slug=String(eventData.title||'evento').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const link=document.createElement('a');
+  link.download='kipzone-'+(slug||'evento')+'-qr.png';
+  if(canvas.toBlob){
+    canvas.toBlob(function(blob){
+      if(!blob){link.href=canvas.toDataURL('image/png');link.click();return;}
+      const url=URL.createObjectURL(blob);link.href=url;link.click();
+      window.setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    },'image/png');
+  }else{link.href=canvas.toDataURL('image/png');link.click();}
+}
 function renderSuccess(id,token,name){
   const checkUrl='https://kipzone.run/checkin/?event='+encodeURIComponent(eventId)+'&registration='+encodeURIComponent(id)+'&token='+encodeURIComponent(token);
+  const date=receiptDateParts();
   app.innerHTML='<section class="card success"><div class="check">✓</div><strong>¡Inscripción confirmada!</strong>'+
     '<p>'+esc(name)+', el organizador ya cuenta contigo para <b>'+esc(eventData.title)+'</b>.</p>'+
-    (eventData.checkIn?'<div id="personal-qr" class="personal-qr" aria-label="QR personal de llegada"></div>'+
-      '<div class="code">PRESENTA ESTE QR AL LLEGAR</div><p style="margin-top:12px">Guárdalo o toma una captura de pantalla.</p>':'')+
-    '</section><a class="cta" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone y conquistar territorio</a>'+
-    '<div class="hint">Tu inscripción ya está guardada. Descarga la app para registrar tu recorrido y conquistar territorio.</div>';
-  if(eventData.checkIn&&window.QRCode){
+    '<div class="receipt-summary">'+
+      '<div class="receipt-row"><span>👤</span><div><span class="receipt-label">Participante</span>'+esc(name)+'</div></div>'+
+      '<div class="receipt-row"><span>🗓️</span><div><span class="receipt-label">Fecha y hora</span>'+esc(date.date)+' · '+esc(date.time)+'</div></div>'+
+      (eventData.address?'<div class="receipt-row"><span>📍</span><div><span class="receipt-label">Dirección</span>'+esc(eventData.address)+'</div></div>':'')+
+    '</div>'+
+    '<div id="personal-qr" class="personal-qr" aria-label="QR personal de inscripción"></div>'+
+    '<div class="code">'+(eventData.checkIn?'PRESENTA ESTE QR AL LLEGAR':'COMPROBANTE PERSONAL DE INSCRIPCIÓN')+'</div>'+
+    '<button id="download-receipt" class="cta receipt-download" type="button">Descargar mi QR</button>'+
+    '</section><a class="cta ghost" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone y conquistar territorio</a>'+
+    '<div class="hint">Guarda tu comprobante para consultar los datos de esta corrida cuando lo necesites.</div>';
+  if(window.QRCode){
     new QRCode(document.getElementById('personal-qr'),{text:checkUrl,width:220,height:220,
       colorDark:'#06120C',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.H});
+    document.getElementById('download-receipt').addEventListener('click',function(){downloadReceipt(name);});
+  }else{
+    const button=document.getElementById('download-receipt');
+    button.disabled=true;button.textContent='No pudimos generar el QR';
   }
 }
 async function loadEvent(){
