@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#0b0f0d">
   <title>Mis eventos | KipZone</title>
   <meta name="description" content="Gestiona y edita tus eventos publicados en KipZone.">
-  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../style.css?v=20260826-zones">
 </head>
 <body class="organizer-panel">
   <div id="panel-loading" class="panel-loading">Conectando con KipZone…</div>
 
   <main id="login-view" class="organizer-login" hidden>
-    <header class="panel-header"><a class="panel-brand" href="/organizadores/"><img src="../../assets/kipzone-wordmark.svg" alt="KipZone"></a></header>
+    <header class="panel-header"><a class="panel-brand" href="/organizadores/"><img src="../../assets/kipzone-wordmark.svg" alt="KipZone"></a><div class="zone-switch compact" aria-label="Cambiar zona"><a href="/">Corredores</a><a href="/organizadores/" aria-current="page">Organizadores</a></div></header>
     <form id="login-form" class="panel-login-card">
       <p class="eyebrow">Panel de organizadores</p>
       <h1>Gestiona tus eventos.</h1>
@@ -30,7 +30,7 @@
   <main id="dashboard-view" hidden>
     <header class="panel-header">
       <a class="panel-brand" href="/organizadores/"><img src="../../assets/kipzone-wordmark.svg" alt="KipZone"></a>
-      <nav><a href="/organizadores/">Portada</a><a class="button primary" href="/organizadores/crear/">Crear evento</a><button id="signout" class="panel-signout" type="button">Salir</button></nav>
+      <nav><div class="zone-switch compact" aria-label="Cambiar zona"><a href="/">Corredores</a><a href="/organizadores/" aria-current="page">Organizadores</a></div><a href="/organizadores/">Portada</a><a class="button primary" href="/organizadores/crear/">Crear evento</a><button id="signout" class="panel-signout" type="button">Salir</button></nav>
     </header>
     <section class="dashboard-content">
       <div class="dashboard-heading"><div><p class="eyebrow">Panel de organizadores</p><h2>Mis eventos</h2><p id="account-label">Consulta tus publicaciones, revisa sus datos y edítalas sin cambiar el identificador del evento.</p></div><a class="button primary" href="/organizadores/crear/">Crear un evento</a></div>
