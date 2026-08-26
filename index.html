@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="KipZone convierte tus rutas en territorios, arenas locales, ranking por zona y eventos públicos para correr con tu comunidad.">
   <title>KipZone | Conquista tu ciudad corriendo</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260826-zones">
 </head>
 <body>
   <header class="site-header" data-header>
     <a class="brand" href="#hero" aria-label="KipZone inicio">
-      <img src="assets/logo.png" alt="KipZone" class="brand-logo" data-asset-fallback>
+      <img src="assets/kipzone-wordmark.svg" alt="KipZone" class="brand-logo" data-asset-fallback>
       <span class="brand-wordmark">KipZone</span>
     </a>
     <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" data-menu-toggle><span></span><span></span></button>
@@ -18,7 +18,10 @@
       <a href="#como-funciona">Cómo funciona</a>
       <a href="#arenas">Arenas</a>
       <a href="#eventos">Eventos</a>
-      <a href="/organizadores/">Organizadores</a>
+      <div class="zone-switch" aria-label="Cambiar zona">
+        <a href="/" aria-current="page">Corredores</a>
+        <a href="/organizadores/">Organizadores</a>
+      </div>
       <a href="#juego">Juego</a>
       <a href="#descargar">Descargar</a>
     </nav>
