@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b0f0d">
   <title>Mis eventos | KipZone</title>
   <meta name="description" content="Gestiona y edita tus eventos publicados en KipZone.">
-  <link rel="stylesheet" href="../style.css?v=20260826-zones">
+  <link rel="stylesheet" href="../style.css?v=20260828-profile-audit">
 </head>
 <body class="organizer-panel">
   <div id="panel-loading" class="panel-loading">Conectando con KipZone…</div>
@@ -32,14 +32,33 @@
       <a class="panel-brand" href="/organizadores/"><img src="../../assets/kipzone-wordmark.svg" alt="KipZone"></a>
       <nav><div class="zone-switch compact" aria-label="Cambiar zona"><a href="/">Corredores</a><a href="/organizadores/" aria-current="page">Organizadores</a></div><a href="/organizadores/">Portada</a><a class="button primary" href="/organizadores/crear/">Crear evento</a><button id="signout" class="panel-signout" type="button">Salir</button></nav>
     </header>
+    <section class="profile-hero">
+      <div id="profile-cover" class="profile-cover"></div>
+      <div class="profile-identity">
+        <div id="profile-avatar" class="profile-avatar"><span>KZ</span></div>
+        <div><p class="eyebrow">Perfil de organizador</p><h1 id="profile-name">Tu perfil</h1><p id="profile-description">Cargando la información de tu cuenta…</p><a id="profile-instagram" target="_blank" rel="noreferrer" hidden></a><small id="profile-email" class="profile-account-email"></small></div>
+        <button id="profile-edit-toggle" class="button secondary" type="button">Editar perfil</button>
+      </div>
+    </section>
+    <section id="profile-editor" class="profile-editor" hidden>
+      <div><p class="eyebrow">Datos públicos</p><h2>Edita tu perfil</h2><p>Estos datos aparecen asociados a tus eventos. Las imágenes son opcionales.</p></div>
+      <form id="profile-form" class="profile-editor-fields">
+        <label>Nombre<input id="profile-name-input" maxlength="80" required></label>
+        <label>Descripción<textarea id="profile-description-input" rows="4" maxlength="500"></textarea></label>
+        <label>Instagram<input id="profile-instagram-input" placeholder="@tucomunidad"></label>
+        <div class="profile-file-row"><label>Foto de perfil<input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp"><span id="profile-photo-name">Opcional</span></label><label>Foto de portada<input id="profile-cover-input" type="file" accept="image/jpeg,image/png,image/webp"><span id="profile-cover-name">Opcional</span></label></div>
+        <button id="profile-save" class="button primary" type="submit">Guardar perfil</button>
+      </form>
+    </section>
+    <p id="profile-message" class="panel-message profile-feedback" role="status" hidden></p>
     <section class="dashboard-content">
-      <div class="dashboard-heading"><div><p class="eyebrow">Panel de organizadores</p><h2>Mis eventos</h2><p id="account-label">Consulta tus publicaciones, revisa sus datos y edítalas sin cambiar el identificador del evento.</p></div><a class="button primary" href="/organizadores/crear/">Crear un evento</a></div>
-      <div class="dashboard-stats"><article><strong id="stat-total">0</strong><span>Eventos</span></article><article><strong id="stat-upcoming">0</strong><span>Próximos</span></article><article><strong id="stat-people">0</strong><span>Participantes</span></article></div>
+      <div class="dashboard-heading"><div><p class="eyebrow">Panel de organizadores</p><h2>Mis eventos</h2><p id="account-label">Aquí aparecen únicamente los eventos activos que pertenecen a esta cuenta.</p></div><a class="button primary" href="/organizadores/crear/">Crear un evento</a></div>
+      <div class="dashboard-stats"><article><strong id="stat-total">0</strong><span>Eventos activos</span></article><article><strong id="stat-upcoming">0</strong><span>Próximos</span></article><article><strong id="stat-people">0</strong><span>Participantes</span></article></div>
       <div class="event-filters" aria-label="Filtrar eventos"><button class="active" type="button" data-filter="all">Todos</button><button type="button" data-filter="upcoming">Próximos</button><button type="button" data-filter="past">Pasados</button></div>
       <div id="managed-events" class="managed-events" aria-live="polite"></div>
     </section>
   </main>
 
-  <script type="module" src="dashboard.js"></script>
+  <script type="module" src="dashboard.js?v=20260828-profile-audit"></script>
 </body>
 </html>
