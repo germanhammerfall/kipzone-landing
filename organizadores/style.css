@@ -82,11 +82,11 @@
 @media(max-width:900px){.topbar nav .zone-switch{order:-1;width:100%;margin-bottom:3px}.topbar nav .zone-switch a{flex:1;min-height:40px}.panel-header nav{flex-wrap:wrap;justify-content:flex-end}.panel-header nav .zone-switch{order:-1}}
 @media(max-width:650px){.panel-header:has(.zone-switch){align-items:flex-start;flex-wrap:wrap;gap:8px;padding-bottom:12px}.panel-header nav{width:100%;justify-content:space-between}.panel-header nav .zone-switch{width:100%}.panel-header nav .zone-switch a{flex:1;min-height:36px}.panel-header nav>a:first-of-type{display:none}}
 
-/* Clear organizer header: account action stays beside the brand. */
+/* Clear organizer header: zone switch stays beside the brand. */
 .topbar-brand-group{display:flex;align-items:center;flex:none;gap:clamp(22px,2.4vw,36px)}
-.topbar-profile{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
 .topbar nav{gap:18px}
 .topbar nav .nav-download{color:var(--lime);white-space:nowrap}
-@media(max-width:1100px) and (min-width:901px){.topbar{padding-inline:16px}.topbar-brand-group{gap:14px}.topbar-brand-group .brand img{width:130px}.topbar-profile{padding:9px 12px;font-size:.75rem}.topbar nav{gap:10px}.topbar nav .button{padding-inline:14px}}
-@media(max-width:900px){.topbar-brand-group{gap:10px}.topbar-brand-group .brand img{width:108px}.topbar-profile{padding:8px 10px;font-size:.68rem}.topbar nav{gap:12px}}
-@media(max-width:380px){.topbar{padding-inline:12px}.topbar-brand-group{gap:8px}.topbar-brand-group .brand img{width:90px}.topbar-profile{padding:7px 8px;font-size:.62rem}.menu-button{padding-inline:10px;font-size:.78rem}}
+@media(max-width:1100px) and (min-width:901px){.topbar{padding-inline:16px}.topbar-brand-group{gap:14px}.topbar-brand-group .brand img{width:130px}.topbar nav{gap:10px}.topbar nav .button{padding-inline:14px}}
+@media(max-width:900px){.topbar-brand-group{gap:10px}.topbar-brand-group .brand img{width:108px}.topbar nav{gap:12px}}
+@media(max-width:560px){.topbar{padding-inline:12px}.topbar-brand-group{gap:8px}.topbar-brand-group .brand img{width:82px}.topbar-brand-group .zone-switch{font-size:.6rem}.topbar-brand-group .zone-switch a{min-height:30px;padding-inline:6px}.menu-button{padding-inline:10px;font-size:.78rem}}
+@media(max-width:380px){.topbar{padding-inline:10px}.topbar-brand-group .brand img{width:72px}.topbar-brand-group .zone-switch{font-size:.55rem}.topbar-brand-group .zone-switch a{padding-inline:5px}.menu-button{padding-inline:8px;font-size:.7rem}}
