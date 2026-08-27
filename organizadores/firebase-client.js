@@ -79,13 +79,50 @@ export function eventImage(data) {
   return String(data?.imagen || data?.photo || data?.image || "").trim();
 }
 
+function referenceId(value) {
+  if (typeof value === "string") return value.replace(/^users\//, "");
+  if (!value || typeof value !== "object") return "";
+  if (typeof value.id === "string") return value.id;
+  if (typeof value.path === "string" && value.path.startsWith("users/")) return value.path.slice(6);
+  return "";
+}
+
+export function eventOwnerIds(data) {
+  return [...new Set(["ownerUid", "uid", "creatorUid", "createdByUid", "creatorRef", "userRef", "createdBy"]
+    .map((key) => referenceId(data?.[key]))
+    .filter(Boolean))];
+}
+
 export function eventOwnerId(data) {
-  return String(data?.ownerUid || data?.creatorUid || data?.uid || data?.userRef?.id || "");
+  return eventOwnerIds(data)[0] || "";
 }
 
 export function eventBelongsToUser(data, uid) {
-  const ownerUid = eventOwnerId(data);
-  return Boolean(ownerUid && uid && ownerUid === String(uid));
+  return Boolean(uid && eventOwnerIds(data).includes(String(uid)));
+}
+
+export function isActiveEvent(data) {
+  const status = String(data?.status || data?.estado || "").trim().toLocaleLowerCase("es-CL");
+  if (status && !["activo", "active", "publicado", "published"].includes(status)) return false;
+  return data?.active !== false && data?.isActive !== false && data?.deleted !== true && data?.archived !== true;
+}
+
+function firstText(data, keys) {
+  for (const key of keys) {
+    const value = data?.[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+export function normalizeOrganizerProfile(data, user = {}) {
+  return {
+    name: firstText(data, ["displayName", "display_name", "nombre", "name"]) || user.displayName || String(user.email || "").split("@")[0] || "Runner KZ",
+    description: firstText(data, ["bio", "descripcion", "description"]),
+    instagram: firstText(data, ["instagram", "enlace"]).replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").replace(/\/$/, ""),
+    photoUrl: firstText(data, ["photoUrl", "photo_url", "photoURL"]) || user.photoURL || "",
+    coverUrl: firstText(data, ["coverPhotoUrl", "cover_photo_url", "coverUrl"]),
+  };
 }
 
 export function eventCoordinates(data) {

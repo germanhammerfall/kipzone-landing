@@ -1,5 +1,6 @@
-import { authMessage, callOrganizerFunction, combineDateAndTime, dateInputValue, eventBelongsToUser, eventCoordinates, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js";
+import { asDate, authMessage, callOrganizerFunction, combineDateAndTime, dateInputValue, eventBelongsToUser, eventCoordinates, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js?v=20260828-profile-audit";
 
+const PLACES_PROXY = "https://gmaps-proxy-semevis3fa-uc.a.run.app";
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";
 const loading = document.getElementById("edit-loading");
 const loginGate = document.getElementById("login-gate");
@@ -13,6 +14,9 @@ let sdk;
 let currentUser;
 let eventRef;
 let eventData;
+let selectedPlace;
+let placeTimer;
+let placeRequest;
 
 function showOnly(view) {
   loading.hidden = view !== loading;
@@ -38,25 +42,128 @@ function toggleType() {
 }
 
 function fillForm(data) {
-  const start = data.nextStart?.toDate?.() || data.startDate?.toDate?.() || data.startTime?.toDate?.() || null;
+  const start = asDate(data.nextStart) || asDate(data.startDate) || asDate(data.startTime);
+  const recurring = data.eventType === "alarm";
   document.getElementById("event-heading").textContent = data.title || "Tu evento";
   document.getElementById("public-link").href = `/eventos/detalle/?id=${encodeURIComponent(eventId)}`;
   document.getElementById("title").value = data.title || "";
   document.getElementById("description").value = data.description || "";
-  document.getElementById("address").value = data.address || "";
+  const address = data.address || "";
+  document.getElementById("address").value = address;
   document.getElementById("topics").value = Array.isArray(data.topics) ? data.topics.join(", ") : "";
   document.getElementById("payment-link").value = data.paymentLink || "";
   document.getElementById("image-url").value = data.imageUrl || data.imagen || data.photo || data.image || "";
-  document.getElementById("status").value = data.status === "Inactivo" ? "Inactivo" : "Activo";
-  document.getElementById("discoverable").checked = data.discoverable !== false;
-  eventType.value = data.eventType === "alarm" ? "alarm" : "fixed";
+  document.getElementById("status").textContent = data.status === "Inactivo" ? "Inactivo" : "Activo";
+  const discoverable = document.getElementById("discoverable");
+  discoverable.checked = data.discoverable !== false;
+  discoverable.disabled = recurring;
+  document.getElementById("visibility-hint").hidden = !recurring;
+  eventType.value = recurring ? "alarm" : "fixed";
   document.getElementById("event-date").value = dateInputValue(start);
   document.getElementById("event-time").value = timeInputValue(start) || "08:00";
   document.getElementById("repeat-time").value = typeof data.tmpRepeatTime === "string" ? data.tmpRepeatTime : timeInputValue(start) || "08:00";
   const weekdays = Array.isArray(data.tmpRepeatWeekdays) ? data.tmpRepeatWeekdays.map(Number) : [];
   document.querySelectorAll("[data-weekday]").forEach((button) => button.classList.toggle("selected", weekdays.includes(Number(button.dataset.weekday))));
+  const coordinates = eventCoordinates(data);
+  selectedPlace = coordinates ? { ...coordinates, address, placeId: String(data.placeId || "") } : null;
+  updatePlaceStatus();
+
+  const paidRegistration = data.isPaidRegistration === true || data.paidRegistrationEnabled === true ||
+    (data.ticketingEnabled === true && data.ticketPlan !== "free_only");
+  const paymentInput = document.getElementById("payment-link");
+  const transfer = data.paymentMethod === "transfer";
+  paymentInput.disabled = !paidRegistration || transfer;
+  document.getElementById("payment-hint").textContent = !paidRegistration
+    ? "Este evento no tiene inscripción pagada configurada; el campo se conserva desactivado."
+    : transfer ? "Este evento usa transferencia bancaria y conserva sus datos actuales." : "Puedes actualizar el enlace HTTPS de pago.";
   toggleType();
 }
+
+function updatePlaceStatus() {
+  const status = document.getElementById("place-status");
+  status.textContent = selectedPlace
+    ? "Punto geográfico confirmado."
+    : "Busca la dirección y selecciona una sugerencia para confirmar el punto geográfico.";
+  status.classList.toggle("confirmed", Boolean(selectedPlace));
+}
+
+function hidePlaceSuggestions() {
+  const root = document.getElementById("edit-place-suggestions");
+  root.hidden = true;
+  root.replaceChildren();
+  document.getElementById("address").setAttribute("aria-expanded", "false");
+}
+
+async function choosePlace(placeId, description) {
+  hidePlaceSuggestions();
+  document.getElementById("place-status").textContent = "Confirmando el punto geográfico…";
+  try {
+    const fields = "geometry,formatted_address,name";
+    const response = await fetch(`${PLACES_PROXY}/details?place_id=${encodeURIComponent(placeId)}&language=es&fields=${encodeURIComponent(fields)}`);
+    if (!response.ok) throw new Error(`details_${response.status}`);
+    const payload = await response.json();
+    const latitude = Number(payload.result?.geometry?.location?.lat);
+    const longitude = Number(payload.result?.geometry?.location?.lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error("missing_coordinates");
+    const address = String(payload.result?.formatted_address || description).trim();
+    selectedPlace = { latitude, longitude, address, placeId };
+    document.getElementById("address").value = address;
+  } catch (error) {
+    console.error("No fue posible confirmar la ubicación:", error);
+    selectedPlace = null;
+  }
+  updatePlaceStatus();
+}
+
+function showPlaceSuggestions(predictions) {
+  const root = document.getElementById("edit-place-suggestions");
+  root.replaceChildren();
+  predictions.slice(0, 5).forEach((prediction) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("role", "option");
+    const title = document.createElement("strong");
+    const detail = document.createElement("span");
+    title.textContent = prediction.structured_formatting?.main_text || prediction.description || "Ubicación";
+    detail.textContent = prediction.structured_formatting?.secondary_text || "";
+    button.append(title, detail);
+    button.addEventListener("click", () => void choosePlace(String(prediction.place_id || ""), String(prediction.description || "")));
+    root.append(button);
+  });
+  root.hidden = !root.childElementCount;
+  document.getElementById("address").setAttribute("aria-expanded", root.hidden ? "false" : "true");
+}
+
+async function searchPlaces(input) {
+  placeRequest?.abort();
+  const controller = new AbortController();
+  placeRequest = controller;
+  try {
+    const response = await fetch(`${PLACES_PROXY}/autocomplete?input=${encodeURIComponent(input)}&language=es`, { signal: controller.signal });
+    if (!response.ok) throw new Error(`autocomplete_${response.status}`);
+    const payload = await response.json();
+    showPlaceSuggestions(Array.isArray(payload.predictions) ? payload.predictions : []);
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      console.error("No fue posible buscar la ubicación:", error);
+      hidePlaceSuggestions();
+    }
+  }
+}
+
+document.getElementById("address").addEventListener("input", (event) => {
+  const input = event.target.value.trim();
+  if (selectedPlace && input !== selectedPlace.address) {
+    selectedPlace = null;
+    updatePlaceStatus();
+  }
+  clearTimeout(placeTimer);
+  if (input.length < 3) {
+    hidePlaceSuggestions();
+    return;
+  }
+  placeTimer = setTimeout(() => void searchPlaces(input), 320);
+});
 
 async function loadEvent(user) {
   if (!eventId) {
@@ -130,7 +237,6 @@ document.getElementById("google-login").addEventListener("click", async (event) 
   }
 });
 
-eventType.addEventListener("change", toggleType);
 document.querySelectorAll("[data-weekday]").forEach((button) => button.addEventListener("click", () => button.classList.toggle("selected")));
 
 editForm.addEventListener("submit", async (event) => {
@@ -160,16 +266,8 @@ editForm.addEventListener("submit", async (event) => {
     message.hidden = false;
     return;
   }
-  const coordinates = eventCoordinates(eventData);
-  if (!coordinates && eventData.creationSource !== "organizer_web") {
-    message.textContent = "Este evento no tiene coordenadas y la función actual de edición necesita una ubicación válida.";
-    message.classList.remove("success");
-    message.hidden = false;
-    return;
-  }
-  const currentStatus = eventData.status === "Inactivo" ? "Inactivo" : "Activo";
-  if (document.getElementById("status").value !== currentStatus) {
-    message.textContent = "La función segura de edición todavía no permite cambiar el estado del evento.";
+  if (!selectedPlace) {
+    message.textContent = "Busca la dirección y selecciona una sugerencia para confirmar el punto geográfico.";
     message.classList.remove("success");
     message.hidden = false;
     return;
@@ -192,12 +290,13 @@ editForm.addEventListener("submit", async (event) => {
       eventId,
       title: document.getElementById("title").value.trim(),
       description: document.getElementById("description").value.trim(),
-      address: document.getElementById("address").value.trim(),
-      ...(coordinates || {}),
+      address: selectedPlace.address,
+      latitude: selectedPlace.latitude,
+      longitude: selectedPlace.longitude,
       startAtMillis: nextStart.getTime(),
       eventType: recurring ? "alarm" : "fixed",
       topics,
-      placeId: String(eventData.placeId || ""),
+      placeId: selectedPlace.placeId || String(eventData.placeId || ""),
       radiusKm: Math.max(0.1, Number(eventData.radiusKm) || 1),
       imageUrl: image,
       discoverable: document.getElementById("discoverable").checked,
@@ -214,15 +313,25 @@ editForm.addEventListener("submit", async (event) => {
     };
     if (recurring) {
       const [repeatHour, repeatMinute] = repeatTime.split(":").map(Number);
+      payload.isRepeating = true;
       payload.repeatWeekdays = weekdays;
       payload.repeatHour = repeatHour;
       payload.repeatMinute = repeatMinute;
+      payload.workOutList = Array.isArray(eventData.workOutList) ? eventData.workOutList : [];
+      payload.tiempoEstimado = Math.max(0, Number(eventData.tiempoEstimado) || 0);
+      payload.distanciaEstimada = Math.max(0, Number(eventData.distanciaEstimada) || 0);
+      payload.tiempoEstimadoCreate = String(eventData.tiempoEstimadoCreate || "");
+      payload.distanciaEstimadaCreate = String(eventData.distanciaEstimadaCreate || "");
+      payload.paymentMethod = eventData.paymentMethod === "transfer" ? "transfer" : "link";
+      payload.paymentProvider = String(eventData.paymentProvider || "mercado_pago");
       await currentUser.getIdToken(true);
     }
-    await callOrganizerFunction(sdk, "updateGroupEvent", payload);
+    await callOrganizerFunction(sdk, recurring ? "updateOwnGroupEvent" : "updateGroupEvent", payload);
     const updatedSnapshot = await sdk.getDoc(eventRef);
-    if (updatedSnapshot.exists()) eventData = updatedSnapshot.data();
-    document.getElementById("event-heading").textContent = payload.title;
+    if (updatedSnapshot.exists()) {
+      eventData = updatedSnapshot.data();
+      fillForm(eventData);
+    }
     message.textContent = "Cambios guardados correctamente en Firebase.";
     message.classList.add("success");
     message.hidden = false;
