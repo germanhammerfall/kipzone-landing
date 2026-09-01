@@ -22,6 +22,8 @@ const profileEditor = document.getElementById("profile-editor");
 const profileForm = document.getElementById("profile-form");
 const profileMessage = document.getElementById("profile-message");
 const profileSave = document.getElementById("profile-save");
+const attendeeModal = document.getElementById("attendee-modal");
+const attendeeContent = document.getElementById("attendee-content");
 let sdk;
 let currentUser;
 let currentProfile;
@@ -33,6 +35,105 @@ function node(tag, className, text) {
   if (className) value.className = className;
   if (text !== undefined) value.textContent = text;
   return value;
+}
+
+function firstText(data, keys) {
+  for (const key of keys) {
+    const value = data?.[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function closeAttendees() {
+  attendeeModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+async function loadAttendees(event) {
+  if (!currentUser) return;
+  attendeeModal.hidden = false;
+  document.body.classList.add("modal-open");
+  document.getElementById("attendee-title").textContent = event.title;
+  document.getElementById("attendee-summary").textContent = `${event.totalParticipantsCount} inscritos · ${event.participantsCount} app + ${event.webRegistrationsCount} QR`;
+  attendeeContent.className = "attendee-state";
+  attendeeContent.textContent = "Cargando datos de los inscritos…";
+  try {
+    const eventSnapshot = await sdk.getDoc(sdk.doc(sdk.db, "run_events", event.id));
+    if (!eventSnapshot.exists() || !eventBelongsToUser(eventSnapshot.data(), currentUser.uid)) throw new Error("not-owner");
+    const sources = [
+      ["web_registrations", "qr"],
+      ["participants", "app"],
+      ["tickets", "ticket"]
+    ];
+    const results = await Promise.allSettled(sources.map(([collectionName]) => sdk.getDocs(sdk.collection(sdk.db, "run_events", event.id, collectionName))));
+    const rows = new Map();
+    results.forEach((result, index) => {
+      if (result.status !== "fulfilled") return;
+      const source = sources[index][1];
+      result.value.forEach((snapshot) => {
+        const data = snapshot.data();
+        const uid = firstText(data, ["uid", "authUid", "userId", "participantUid"]);
+        const email = firstText(data, ["attendeeEmail", "email", "correo"]);
+        const phone = firstText(data, ["phone", "telefono", "phoneNumber"]);
+        const key = uid || email || phone || snapshot.id;
+        rows.set(key, {
+          id: key,
+          uid,
+          name: firstText(data, ["fullName", "attendeeName", "displayName", "name", "nombre"]) || (source === "app" ? "Usuario de la app" : "Inscrito sin nombre"),
+          email,
+          phone,
+          rut: firstText(data, ["rut", "RUT"]),
+          source: source === "qr" || data.source === "event_qr_web" ? "qr" : "app",
+          status: firstText(data, ["status", "estado"]) || "registered"
+        });
+      });
+    });
+    const profileIds = [...new Set([...rows.values()].map((row) => row.uid).filter(Boolean))];
+    await Promise.all(profileIds.map(async (uid) => {
+      try {
+        const profile = await sdk.getDoc(sdk.doc(sdk.db, "users", uid));
+        if (!profile.exists()) return;
+        const data = profile.data();
+        for (const row of rows.values()) if (row.uid === uid) {
+          if (row.name === "Usuario de la app") row.name = firstText(data, ["displayName", "display_name", "nombre", "name"]) || row.name;
+          row.email ||= firstText(data, ["email", "correo"]);
+          row.phone ||= firstText(data, ["phone", "telefono", "phoneNumber"]);
+        }
+      } catch (_) { /* El perfil puede no exponer datos adicionales. */ }
+    }));
+    const attendees = [...rows.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+    if (!attendees.length && results.every((result) => result.status === "rejected")) throw new Error("permission-denied");
+    if (!attendees.length) {
+      attendeeContent.className = "attendee-state";
+      attendeeContent.textContent = "No hay datos de inscritos disponibles para este evento.";
+      return;
+    }
+    attendeeContent.className = "attendee-table-wrap";
+    const table = node("table", "attendee-table");
+    const head = node("thead");
+    const header = node("tr");
+    ["Nombre", "Contacto", "RUT", "Origen", "Estado"].forEach((label) => header.append(node("th", "", label)));
+    head.append(header);
+    const body = node("tbody");
+    attendees.forEach((attendee) => {
+      const row = node("tr");
+      const nameCell = node("td"); nameCell.append(node("b", "", attendee.name));
+      const contact = node("td");
+      if (attendee.email) { const email = node("a", "", attendee.email); email.href = `mailto:${attendee.email}`; contact.append(email); }
+      if (attendee.phone) { const phone = node("a", "", attendee.phone); phone.href = `tel:${attendee.phone.replace(/[^+\d]/g, "")}`; contact.append(phone); }
+      if (!attendee.email && !attendee.phone) contact.append(node("span", "muted", "No informado"));
+      const sourceCell = node("td"); sourceCell.append(node("span", `attendee-source ${attendee.source}`, attendee.source === "app" ? "App KZ" : "Código QR"));
+      row.append(nameCell, contact, node("td", "", attendee.rut || "—"), sourceCell, node("td", "", attendee.status === "registered" || attendee.status === "confirmed" ? "Confirmado" : attendee.status));
+      body.append(row);
+    });
+    table.append(head, body);
+    attendeeContent.replaceChildren(table);
+  } catch (error) {
+    console.error("No fue posible cargar los inscritos:", error);
+    attendeeContent.className = "attendee-state error";
+    attendeeContent.textContent = "No pudimos acceder al detalle. Confirma que ingresaste con la cuenta que creó este evento.";
+  }
 }
 
 function showOnly(view) {
@@ -179,11 +280,14 @@ function renderEvents() {
     );
     meta.append(people, node("span", "", event.status));
     const actions = node("div", "managed-actions");
+    const attendees = node("button", "button secondary", "Ver inscritos");
+    attendees.type = "button";
+    attendees.addEventListener("click", () => loadAttendees(event));
     const edit = node("a", "button primary", "Editar evento");
     edit.href = `/organizadores/editar/?id=${encodeURIComponent(event.id)}`;
     const view = node("a", "button secondary", "Ver página pública");
     view.href = `/eventos/detalle/?id=${encodeURIComponent(event.id)}`;
-    actions.append(edit, view);
+    actions.append(attendees, edit, view);
     body.append(meta, actions);
     card.append(imageBox, body);
     eventsRoot.append(card);
@@ -347,6 +451,9 @@ googleLogin.addEventListener("click", async () => {
 });
 
 document.getElementById("signout").addEventListener("click", () => sdk.signOut(sdk.auth));
+document.getElementById("attendee-close").addEventListener("click", closeAttendees);
+document.getElementById("attendee-footer-close").addEventListener("click", closeAttendees);
+attendeeModal.addEventListener("click", (event) => { if (event.target === attendeeModal) closeAttendees(); });
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
   activeFilter = button.dataset.filter;
   document.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("active", item === button));
