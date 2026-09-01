@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b0f0d">
   <title>Mis eventos | KipZone</title>
   <meta name="description" content="Gestiona y edita tus eventos publicados en KipZone.">
-  <link rel="stylesheet" href="../style.css?v=20260828-profile-audit">
+  <link rel="stylesheet" href="../style.css?v=20260901-attendees">
 </head>
 <body class="organizer-panel">
   <div id="panel-loading" class="panel-loading">Conectando con KipZone…</div>
@@ -59,6 +59,14 @@
     </section>
   </main>
 
-  <script type="module" src="dashboard.js?v=20260828-profile-audit"></script>
+  <div id="attendee-modal" class="attendee-modal" role="dialog" aria-modal="true" aria-labelledby="attendee-title" hidden>
+    <section class="attendee-panel">
+      <header><div><p class="eyebrow">Inscripciones privadas</p><h2 id="attendee-title">Inscritos</h2><p id="attendee-summary"></p></div><button id="attendee-close" type="button" aria-label="Cerrar">×</button></header>
+      <div id="attendee-content" class="attendee-state">Cargando inscritos…</div>
+      <footer><small>Información privada: solo está disponible dentro de la cuenta organizadora propietaria del evento.</small><button id="attendee-footer-close" class="button secondary" type="button">Cerrar</button></footer>
+    </section>
+  </div>
+
+  <script type="module" src="dashboard.js?v=20260901-attendees"></script>
 </body>
 </html>
