@@ -215,6 +215,17 @@ function phoneError(err){
 function fieldString(v){return {stringValue:String(v)};}
 function fieldBool(v){return {booleanValue:!!v};}
 function fieldTime(v){return {timestampValue:v.toISOString()};}
+function tokenIssuedAt(idToken){
+  try{
+    const encoded=String(idToken||'').split('.')[1]||'';
+    const normalized=encoded.replace(/-/g,'+').replace(/_/g,'/');
+    const payload=JSON.parse(atob(normalized));
+    const issuedAt=Number(payload.iat)*1000;
+    if(Number.isFinite(issuedAt)&&issuedAt>0)return new Date(issuedAt);
+  }catch(_){}
+  // Leave a small safety margin when a device clock is slightly ahead.
+  return new Date(Date.now()-60000);
+}
 
 function renderError(message,details){
   app.innerHTML='<div class="state"><strong style="color:var(--text)">'+esc(message)+'</strong>'+
@@ -361,7 +372,7 @@ async function submitRegistration(ev){
       fullName:fieldString(fullName),phone:fieldString(phone),rut:fieldString(rut),
       source:fieldString('event_qr_web'),status:fieldString('registered'),
       authUid:fieldString(auth.uid),occurrenceStart:fieldTime(eventData.start),
-      registeredAt:{timestampValue:new Date().toISOString()},privacyConsent:fieldBool(true),
+      registeredAt:fieldTime(tokenIssuedAt(idToken)),privacyConsent:fieldBool(true),
       privacyVersion:fieldString('2026-08'),personalQrToken:fieldString(token),
       checkInEnabled:fieldBool(eventData.checkIn)
     };
