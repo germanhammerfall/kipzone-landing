@@ -164,9 +164,10 @@ async function getPhoneSdk(){
   if(!phoneSdkPromise){
     phoneSdkPromise=Promise.all([
       import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js')
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
     ]).then(async function(modules){
-      const appSdk=modules[0],authSdk=modules[1];
+      const appSdk=modules[0],authSdk=modules[1],firestoreSdk=modules[2];
       const name='kipzone-qr-phone';
       const existing=appSdk.getApps().find(function(item){return item.name===name;});
       const phoneApp=existing||appSdk.initializeApp({
@@ -175,9 +176,10 @@ async function getPhoneSdk(){
         appId:'1:989094287116:web:c093e38442ba31030d9b29'
       },name);
       const auth=authSdk.getAuth(phoneApp);
+      const firestore=firestoreSdk.getFirestore(phoneApp);
       await authSdk.setPersistence(auth,authSdk.inMemoryPersistence);
       auth.languageCode='es';
-      return {auth:auth,sdk:authSdk};
+      return {auth:auth,sdk:authSdk,firestore:firestore,firestoreSdk:firestoreSdk};
     }).catch(function(err){phoneSdkPromise=null;throw err;});
   }
   return phoneSdkPromise;
@@ -330,7 +332,8 @@ async function submitRegistration(ev){
     const verified=await phoneVerification.confirmation.confirm(code);
     const user=verified.user;
     if(normalizePhone(user.phoneNumber)!==phone)throw new Error('PHONE_NUMBER_MISMATCH');
-    const idToken=await user.getIdToken();
+    const idToken=await user.getIdToken(true);
+    const firebaseClient=await getPhoneSdk();
     const auth=saveAuth({uid:user.uid,idToken:idToken,refreshToken:user.refreshToken,
       expiresAt:Date.now()+55*60*1000,phone:phone,provider:'phone'});
     const id=registrationId(auth.uid,eventData.start);
@@ -355,12 +358,12 @@ async function submitRegistration(ev){
     // servidor. Si la lectura falla da igual el motivo -no existe, o el token
     // todavia no vale-: se sigue al create de siempre.
     try{
-      const existing=await jsonFetch(registrationUrl(id),{
-        headers:{'Authorization':'Bearer '+auth.idToken}
-      });
-      const existingToken=val(existing.fields&&existing.fields.personalQrToken);
+      const registrationRef=firebaseClient.firestoreSdk.doc(firebaseClient.firestore,'run_events',eventId,'web_registrations',id);
+      const existing=await firebaseClient.firestoreSdk.getDoc(registrationRef);
+      const existingData=existing.exists()?existing.data():null;
+      const existingToken=existingData&&existingData.personalQrToken;
       if(existingToken){
-        const existingName=val(existing.fields.fullName)||fullName;
+        const existingName=existingData.fullName||fullName;
         localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),
           JSON.stringify({id:id,token:existingToken}));
         renderSuccess(id,existingToken,existingName);
@@ -368,17 +371,15 @@ async function submitRegistration(ev){
       }
     }catch(_){}
     const token=randomToken();
-    const fields={
-      fullName:fieldString(fullName),phone:fieldString(phone),rut:fieldString(rut),
-      source:fieldString('event_qr_web'),status:fieldString('registered'),
-      authUid:fieldString(auth.uid),occurrenceStart:fieldTime(eventData.start),
-      registeredAt:fieldTime(tokenIssuedAt(idToken)),privacyConsent:fieldBool(true),
-      privacyVersion:fieldString('2026-08'),personalQrToken:fieldString(token),
-      checkInEnabled:fieldBool(eventData.checkIn)
-    };
-    await jsonFetch(registrationCreateUrl(id),{
-      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+auth.idToken},
-      body:JSON.stringify({fields:fields})
+    const registrationRef=firebaseClient.firestoreSdk.doc(firebaseClient.firestore,'run_events',eventId,'web_registrations',id);
+    await firebaseClient.firestoreSdk.setDoc(registrationRef,{
+      fullName:fullName,phone:phone,rut:rut,
+      source:'event_qr_web',status:'registered',
+      authUid:auth.uid,
+      occurrenceStart:firebaseClient.firestoreSdk.Timestamp.fromDate(eventData.start),
+      registeredAt:firebaseClient.firestoreSdk.serverTimestamp(),
+      privacyConsent:true,privacyVersion:'2026-08',personalQrToken:token,
+      checkInEnabled:!!eventData.checkIn
     });
     localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),JSON.stringify({id:id,token:token}));
     renderSuccess(id,token,fullName);
