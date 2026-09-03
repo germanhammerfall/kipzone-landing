@@ -304,10 +304,12 @@ editForm.addEventListener("submit", async (event) => {
       ticketPlan: String(eventData.ticketPlan || "free_only"),
       ticketCapacity: Math.max(0, Number(eventData.ticketCapacity) || 0),
       freeTicketLimit: Math.max(0, Number(eventData.freeTicketLimit) || 0),
+      webRegistrationEnabled: true,
+      webRegistrationClosed: false,
       isPaidRegistration: paidRegistration,
       registrationPrice: Math.max(0, Number(eventData.registrationPrice) || 0),
       registrationCurrency: String(eventData.registrationCurrency || "CLP"),
-      paymentMethod: eventData.paymentMethod === "transfer" ? "transfer" : "mercadopago",
+      paymentMethod: eventData.paymentMethod === "free" ? "free" : eventData.paymentMethod === "transfer" ? "transfer" : "mercadopago",
       paymentLink: safeHttpUrl(paymentLink),
       bankTransfer: eventData.bankTransfer || null
     };
