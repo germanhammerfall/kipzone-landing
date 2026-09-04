@@ -61,6 +61,8 @@
   .receipt-row{display:flex;gap:10px;align-items:flex-start;color:var(--text);font-size:13px;line-height:1.45;margin-top:12px}
   .receipt-row:first-child{margin-top:0}.receipt-label{display:block;color:var(--soft);font-size:10px;letter-spacing:.7px;text-transform:uppercase;margin-bottom:3px}
   .receipt-download{margin-top:18px}
+  .receipt-save-fallback{margin-top:16px;padding:14px;background:var(--surface2);border:1px solid var(--line);border-radius:14px}
+  .receipt-save-fallback p{margin:0 auto 12px}.receipt-save-fallback img{display:block;width:100%;height:auto;border-radius:10px}
   .personal-qr{background:#fff;border-radius:18px;padding:18px;width:max-content;max-width:100%;
     margin:20px auto 10px}.personal-qr img,.personal-qr canvas{display:block;max-width:100%}
   .code{font-size:11px;letter-spacing:1.2px;color:var(--soft);text-align:center;margin-top:8px}
@@ -414,8 +416,10 @@ function receiptDateParts(){
   };
 }
 async function downloadReceipt(name){
+  const button=document.getElementById('download-receipt');
   const qr=document.querySelector('#personal-qr canvas')||document.querySelector('#personal-qr img');
   if(!qr){window.alert('No pudimos preparar tu código QR. Inténtalo nuevamente.');return;}
+  if(button){button.disabled=true;button.textContent='Preparando comprobante…';}
   if(qr.tagName==='IMG'&&!qr.complete&&qr.decode)await qr.decode();
   const canvas=document.createElement('canvas');
   canvas.width=1080;canvas.height=1520;
@@ -450,15 +454,50 @@ async function downloadReceipt(name){
   context.font='600 20px Arial,sans-serif';
   context.fillText(eventData.checkIn?'PRESENTA ESTE QR AL LLEGAR':'TU INSCRIPCIÓN ESTÁ CONFIRMADA',canvas.width/2,Math.min(qrY+qrSize+78,1430));
   const slug=String(eventData.title||'evento').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  const link=document.createElement('a');
-  link.download='kipzone-'+(slug||'evento')+'-qr.png';
-  if(canvas.toBlob){
-    canvas.toBlob(function(blob){
-      if(!blob){link.href=canvas.toDataURL('image/png');link.click();return;}
-      const url=URL.createObjectURL(blob);link.href=url;link.click();
-      window.setTimeout(function(){URL.revokeObjectURL(url);},1000);
-    },'image/png');
-  }else{link.href=canvas.toDataURL('image/png');link.click();}
+  const filename='kipzone-'+(slug||'evento')+'-qr.png';
+  const dataUrl=canvas.toDataURL('image/png');
+  const fallback=document.getElementById('receipt-save-fallback');
+  const fallbackImage=document.getElementById('receipt-save-image');
+  const showFallback=function(){
+    if(fallback&&fallbackImage){
+      fallbackImage.src=dataUrl;
+      fallback.hidden=false;
+      fallback.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  };
+  try{
+    const blob=await new Promise(function(resolve){
+      if(!canvas.toBlob){resolve(null);return;}
+      canvas.toBlob(resolve,'image/png');
+    });
+    if(blob&&window.File&&navigator.share){
+      const file=new File([blob],filename,{type:'image/png'});
+      const shareData={files:[file],title:'Comprobante de inscripción KipZone'};
+      if(!navigator.canShare||navigator.canShare(shareData)){
+        try{
+          await navigator.share(shareData);
+          return;
+        }catch(err){
+          if(err&&err.name==='AbortError')return;
+        }
+      }
+    }
+    if(/Instagram|FBAN|FBAV/i.test(navigator.userAgent)){
+      showFallback();
+      return;
+    }
+    const link=document.createElement('a');
+    const url=blob?URL.createObjectURL(blob):dataUrl;
+    link.href=url;link.download=filename;link.style.display='none';
+    document.body.appendChild(link);link.click();link.remove();
+    if(blob)window.setTimeout(function(){URL.revokeObjectURL(url);},60000);
+    window.setTimeout(showFallback,800);
+  }catch(err){
+    console.error('No fue posible descargar el comprobante:',err);
+    showFallback();
+  }finally{
+    if(button){button.disabled=false;button.textContent='Guardar o compartir mi QR';}
+  }
 }
 function renderSuccess(id,token,name){
   const checkUrl='https://kipzone.run/checkin/?event='+encodeURIComponent(eventId)+'&registration='+encodeURIComponent(id)+'&token='+encodeURIComponent(token);
@@ -472,7 +511,8 @@ function renderSuccess(id,token,name){
     '</div>'+
     '<div id="personal-qr" class="personal-qr" aria-label="QR personal de inscripción"></div>'+
     '<div class="code">'+(eventData.checkIn?'PRESENTA ESTE QR AL LLEGAR':'COMPROBANTE PERSONAL DE INSCRIPCIÓN')+'</div>'+
-    '<button id="download-receipt" class="cta receipt-download" type="button">Descargar mi QR</button>'+
+    '<button id="download-receipt" class="cta receipt-download" type="button">Guardar o compartir mi QR</button>'+
+    '<div id="receipt-save-fallback" class="receipt-save-fallback" hidden><p><b>Guarda tu comprobante</b><br>Mantén presionada la imagen y elige “Guardar imagen”.</p><img id="receipt-save-image" alt="Comprobante de inscripción KipZone"></div>'+
     '</section><a class="cta ghost" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone y conquistar territorio</a>'+
     '<div class="hint">Guarda tu comprobante para consultar los datos de esta corrida cuando lo necesites.</div>';
   if(window.QRCode){
