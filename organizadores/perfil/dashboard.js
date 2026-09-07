@@ -24,11 +24,14 @@ const profileMessage = document.getElementById("profile-message");
 const profileSave = document.getElementById("profile-save");
 const attendeeModal = document.getElementById("attendee-modal");
 const attendeeContent = document.getElementById("attendee-content");
+const attendeeDownload = document.getElementById("attendee-download");
 let sdk;
 let currentUser;
 let currentProfile;
 let allEvents = [];
 let activeFilter = "all";
+let currentAttendeeEvent = null;
+let currentAttendees = [];
 
 function node(tag, className, text) {
   const value = document.createElement(tag);
@@ -50,8 +53,62 @@ function closeAttendees() {
   document.body.classList.remove("modal-open");
 }
 
+function attendeeStatusLabel(status) {
+  if (status === "registered" || status === "confirmed") return "Confirmado";
+  if (status === "pending_payment") return "Pago pendiente";
+  return status || "Sin estado";
+}
+
+function csvCell(value) {
+  let text = String(value ?? "").replace(/[\r\n]+/g, " ").trim();
+  if (/^[=+\-@\t]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function reportFilename(title) {
+  const eventName = String(title || "evento")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "evento";
+  return `informe-corredores-${eventName}.csv`;
+}
+
+function downloadAttendeeReport() {
+  if (!currentAttendeeEvent || !currentAttendees.length) return;
+  const eventDate = currentAttendeeEvent.nextStart instanceof Date && !Number.isNaN(currentAttendeeEvent.nextStart.getTime())
+    ? currentAttendeeEvent.nextStart.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })
+    : "Fecha por confirmar";
+  const rows = [
+    ["Evento", "Fecha", "Nombre", "Correo", "Teléfono", "RUT", "Origen", "Estado"],
+    ...currentAttendees.map((attendee) => [
+      currentAttendeeEvent.title,
+      eventDate,
+      attendee.name,
+      attendee.email,
+      attendee.phone,
+      attendee.rut,
+      attendee.source === "app" ? "App KZ" : "Código QR",
+      attendeeStatusLabel(attendee.status)
+    ])
+  ];
+  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(";")).join("\r\n")}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = reportFilename(currentAttendeeEvent.title);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 async function loadAttendees(event) {
   if (!currentUser) return;
+  currentAttendeeEvent = event;
+  currentAttendees = [];
+  attendeeDownload.disabled = true;
   attendeeModal.hidden = false;
   document.body.classList.add("modal-open");
   document.getElementById("attendee-title").textContent = event.title;
@@ -109,6 +166,8 @@ async function loadAttendees(event) {
       attendeeContent.textContent = "No hay datos de inscritos disponibles para este evento.";
       return;
     }
+    currentAttendees = attendees;
+    attendeeDownload.disabled = false;
     attendeeContent.className = "attendee-table-wrap";
     const table = node("table", "attendee-table");
     const head = node("thead");
@@ -124,7 +183,7 @@ async function loadAttendees(event) {
       if (attendee.phone) { const phone = node("a", "", attendee.phone); phone.href = `tel:${attendee.phone.replace(/[^+\d]/g, "")}`; contact.append(phone); }
       if (!attendee.email && !attendee.phone) contact.append(node("span", "muted", "No informado"));
       const sourceCell = node("td"); sourceCell.append(node("span", `attendee-source ${attendee.source}`, attendee.source === "app" ? "App KZ" : "Código QR"));
-      row.append(nameCell, contact, node("td", "", attendee.rut || "—"), sourceCell, node("td", "", attendee.status === "registered" || attendee.status === "confirmed" ? "Confirmado" : attendee.status));
+      row.append(nameCell, contact, node("td", "", attendee.rut || "—"), sourceCell, node("td", "", attendeeStatusLabel(attendee.status)));
       body.append(row);
     });
     table.append(head, body);
@@ -453,6 +512,7 @@ googleLogin.addEventListener("click", async () => {
 document.getElementById("signout").addEventListener("click", () => sdk.signOut(sdk.auth));
 document.getElementById("attendee-close").addEventListener("click", closeAttendees);
 document.getElementById("attendee-footer-close").addEventListener("click", closeAttendees);
+attendeeDownload.addEventListener("click", downloadAttendeeReport);
 attendeeModal.addEventListener("click", (event) => { if (event.target === attendeeModal) closeAttendees(); });
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
   activeFilter = button.dataset.filter;
