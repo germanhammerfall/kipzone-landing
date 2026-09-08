@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0b0f0d">
   <title>Mis eventos | KipZone</title>
   <meta name="description" content="Gestiona y edita tus eventos publicados en KipZone.">
-  <link rel="stylesheet" href="../style.css?v=20260907-report">
+  <link rel="stylesheet" href="../style.css?v=20260908-wallet-report">
 </head>
 <body class="organizer-panel">
   <div id="panel-loading" class="panel-loading">Conectando con KipZone…</div>
@@ -50,6 +50,23 @@
         <label>Descripción<textarea id="profile-description-input" rows="4" maxlength="500"></textarea></label>
         <label>Instagram<input id="profile-instagram-input" placeholder="@tucomunidad"></label>
         <div class="profile-file-row"><label>Foto de perfil<input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp"><span id="profile-photo-name">Opcional</span></label><label>Foto de portada<input id="profile-cover-input" type="file" accept="image/jpeg,image/png,image/webp"><span id="profile-cover-name">Opcional</span></label></div>
+        <section class="gym-profile-block">
+          <label class="profile-check"><input id="profile-is-gym" type="checkbox"><span><b>Esta cuenta pertenece a un gimnasio</b><small>Permite registrar sucursales y preparar la tarjeta digital para corredores.</small></span></label>
+          <div id="gym-profile-fields" class="gym-profile-fields" hidden>
+            <div class="gym-contact-grid"><label>Teléfono del gimnasio<input id="gym-phone" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678"></label><label>Sitio web<input id="gym-website" inputmode="url" autocomplete="url" placeholder="www.gimnasio.cl"></label></div>
+            <div class="gym-location-heading"><div><h3>Sucursales</h3><p>Estas ubicaciones se usarán para relacionar los Social Runs y los avisos de cercanía de Google Wallet.</p></div><span id="gym-location-count">0/10</span></div>
+            <div id="gym-location-list" class="gym-location-list" hidden></div>
+            <div class="gym-location-add">
+              <label>Nombre de la sucursal<input id="gym-location-name" maxlength="80" placeholder="Ej. Casa matriz"></label>
+              <label>Dirección de la sucursal<input id="gym-location-address" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gym-place-suggestions" placeholder="Busca una dirección y selecciónala"></label>
+              <div id="gym-place-suggestions" class="profile-place-suggestions" role="listbox" hidden></div>
+              <p id="gym-place-status" class="gym-place-status">Escribe al menos 3 letras y selecciona una sugerencia para confirmar las coordenadas.</p>
+              <button id="gym-location-add-button" class="button secondary" type="button" disabled>Agregar sucursal</button>
+            </div>
+            <label class="profile-check wallet-request"><input id="gym-wallet-request" type="checkbox"><span><b>Solicitar tarjeta Google Wallet</b><small>KipZone habilitará la tarjeta cuando la cuenta de emisor esté conectada.</small></span></label>
+            <label id="gym-marketing-row" class="profile-check wallet-consent" hidden><input id="gym-marketing-authorized" type="checkbox"><span><b>Autorización del gimnasio</b><small>Confirmo que las promociones se enviarán solamente a personas que aceptaron recibirlas y que podrán dejar de recibirlas.</small></span></label>
+          </div>
+        </section>
         <button id="profile-save" class="button primary" type="submit">Guardar perfil</button>
       </form>
     </section>
@@ -70,6 +87,6 @@
     </section>
   </div>
 
-  <script type="module" src="dashboard.js?v=20260907-report"></script>
+  <script type="module" src="dashboard.js?v=20260908-wallet-report"></script>
 </body>
 </html>

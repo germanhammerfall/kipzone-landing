@@ -10,6 +10,7 @@ import {
 } from "../firebase-client.js?v=20260828-profile-audit";
 
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
+const PLACES_PROXY = "https://gmaps-proxy-semevis3fa-uc.a.run.app";
 const loading = document.getElementById("panel-loading");
 const loginView = document.getElementById("login-view");
 const dashboardView = document.getElementById("dashboard-view");
@@ -24,10 +25,19 @@ const profileMessage = document.getElementById("profile-message");
 const profileSave = document.getElementById("profile-save");
 const attendeeModal = document.getElementById("attendee-modal");
 const attendeeContent = document.getElementById("attendee-content");
+const gymFields = document.getElementById("gym-profile-fields");
+const gymLocationList = document.getElementById("gym-location-list");
+const gymLocationAddress = document.getElementById("gym-location-address");
+const gymLocationAddButton = document.getElementById("gym-location-add-button");
+const gymPlaceSuggestions = document.getElementById("gym-place-suggestions");
 const attendeeDownload = document.getElementById("attendee-download");
 let sdk;
 let currentUser;
 let currentProfile;
+let currentGymProfile = emptyGymProfile();
+let selectedGymPlace = null;
+let gymPlaceTimer;
+let gymPlaceRequest;
 let allEvents = [];
 let activeFilter = "all";
 let currentAttendeeEvent = null;
@@ -46,6 +56,67 @@ function firstText(data, keys) {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return "";
+}
+
+function emptyGymProfile() {
+  return {
+    isGym: false,
+    contactPhone: "",
+    website: "",
+    locations: [],
+    walletProgramRequested: false,
+    marketingAuthorized: false,
+    walletProgramStatus: "inactive",
+    walletClassId: ""
+  };
+}
+
+function normalizePhone(value) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (digits.startsWith("56")) digits = digits.slice(2);
+  if (digits.length === 8) digits = `9${digits}`;
+  return digits.length === 9 ? `+56${digits}` : "";
+}
+
+function normalizeWebsite(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function normalizeGymProfile(data) {
+  const stored = data?.gymProfile && typeof data.gymProfile === "object" ? data.gymProfile : {};
+  const locations = (Array.isArray(stored.locations) ? stored.locations : []).flatMap((item, index) => {
+    if (!item || typeof item !== "object") return [];
+    const latitude = Number(item.latitude);
+    const longitude = Number(item.longitude);
+    const address = String(item.address || "").trim();
+    if (!address || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return [];
+    return [{
+      id: String(item.id || `location-${index + 1}`),
+      name: String(item.name || `Sucursal ${index + 1}`).trim().slice(0, 80),
+      address,
+      latitude,
+      longitude,
+      placeId: String(item.placeId || "").trim().slice(0, 300),
+      active: item.active !== false
+    }];
+  }).slice(0, 10);
+  return {
+    isGym: stored.isGym === true || data?.organizerBusinessType === "gym",
+    contactPhone: String(stored.contactPhone || ""),
+    website: String(stored.website || ""),
+    locations,
+    walletProgramRequested: stored.walletProgramRequested === true,
+    marketingAuthorized: stored.marketingAuthorized === true || data?.walletMarketingConsent === true,
+    walletProgramStatus: ["pending", "active"].includes(String(stored.walletProgramStatus)) ? String(stored.walletProgramStatus) : "inactive",
+    walletClassId: String(stored.walletClassId || "")
+  };
 }
 
 function closeAttendees() {
@@ -281,9 +352,46 @@ function renderProfile(profile, user) {
   document.getElementById("profile-instagram-input").value = profile.instagram ? `@${profile.instagram}` : "";
 }
 
+function renderGymLocations() {
+  gymLocationList.replaceChildren();
+  currentGymProfile.locations.forEach((location) => {
+    const card = node("article");
+    const copy = node("div");
+    copy.append(node("b", "", location.name), node("span", "", location.address));
+    const remove = node("button", "", "Eliminar");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Eliminar ${location.name}`);
+    remove.addEventListener("click", () => {
+      currentGymProfile.locations = currentGymProfile.locations.filter((item) => item.id !== location.id);
+      renderGymLocations();
+    });
+    card.append(copy, remove);
+    gymLocationList.append(card);
+  });
+  gymLocationList.hidden = !currentGymProfile.locations.length;
+  document.getElementById("gym-location-count").textContent = `${currentGymProfile.locations.length}/10`;
+  gymLocationAddButton.disabled = !selectedGymPlace || currentGymProfile.locations.length >= 10;
+}
+
+function renderGymProfile(profile) {
+  currentGymProfile = profile;
+  document.getElementById("profile-is-gym").checked = profile.isGym;
+  document.getElementById("gym-phone").value = profile.contactPhone;
+  document.getElementById("gym-website").value = profile.website;
+  document.getElementById("gym-wallet-request").checked = profile.walletProgramRequested;
+  document.getElementById("gym-marketing-authorized").checked = profile.marketingAuthorized;
+  gymFields.hidden = !profile.isGym;
+  document.getElementById("gym-marketing-row").hidden = !profile.walletProgramRequested;
+  renderGymLocations();
+}
+
 async function loadProfile(user) {
   const snapshot = await sdk.getDoc(sdk.doc(sdk.db, "users", user.uid));
-  return normalizeOrganizerProfile(snapshot.exists() ? snapshot.data() : {}, user);
+  const data = snapshot.exists() ? snapshot.data() : {};
+  return {
+    organizer: normalizeOrganizerProfile(data, user),
+    gym: normalizeGymProfile(data)
+  };
 }
 
 function updateStats() {
@@ -359,6 +467,7 @@ async function openDashboard(user) {
   allEvents = [];
   updateStats();
   renderProfile(normalizeOrganizerProfile({}, user), user);
+  renderGymProfile(emptyGymProfile());
   profileMessage.hidden = true;
   profileMessage.classList.remove("error", "success");
   document.getElementById("account-label").textContent = `${user.email || "Tu cuenta"} · Aquí aparecen únicamente tus eventos activos.`;
@@ -366,10 +475,12 @@ async function openDashboard(user) {
   const [profileResult, eventsResult] = await Promise.allSettled([loadProfile(user), loadOwnedEvents(user.uid)]);
   if (currentUser?.uid !== expectedUid) return;
   if (profileResult.status === "fulfilled") {
-    renderProfile(profileResult.value, user);
+    renderProfile(profileResult.value.organizer, user);
+    renderGymProfile(profileResult.value.gym);
   } else {
     console.error("No fue posible cargar el perfil del organizador:", profileResult.reason);
     renderProfile(normalizeOrganizerProfile({}, user), user);
+    renderGymProfile(emptyGymProfile());
     profileMessage.textContent = authMessage(profileResult.reason);
     profileMessage.classList.add("error");
     profileMessage.hidden = false;
@@ -410,6 +521,20 @@ profileForm.addEventListener("submit", async (event) => {
   try {
     const name = document.getElementById("profile-name-input").value.trim();
     if (name.length < 2) throw new Error("profile-name-too-short");
+    const isGym = document.getElementById("profile-is-gym").checked;
+    const phoneInput = document.getElementById("gym-phone").value.trim();
+    const contactPhone = phoneInput ? normalizePhone(phoneInput) : "";
+    if (isGym && phoneInput && !contactPhone) throw new Error("gym-phone-invalid");
+    const websiteInput = document.getElementById("gym-website").value.trim();
+    const website = normalizeWebsite(websiteInput);
+    if (isGym && websiteInput && !website) throw new Error("gym-website-invalid");
+    const walletProgramRequested = isGym && document.getElementById("gym-wallet-request").checked;
+    const marketingAuthorized = isGym && document.getElementById("gym-marketing-authorized").checked;
+    if (walletProgramRequested && !currentGymProfile.locations.length) throw new Error("gym-location-required");
+    if (walletProgramRequested && !marketingAuthorized) throw new Error("gym-marketing-required");
+    const walletProgramStatus = !isGym || !walletProgramRequested
+      ? "inactive"
+      : currentGymProfile.walletProgramStatus === "active" ? "active" : "pending";
     const photo = validatedImage(document.getElementById("profile-photo-input"));
     const cover = validatedImage(document.getElementById("profile-cover-input"));
     const [photoUrl, coverUrl] = await Promise.all([
@@ -428,6 +553,26 @@ profileForm.addEventListener("submit", async (event) => {
       photoUrl: photoUrl || currentProfile.photoUrl,
       coverUrl: coverUrl || currentProfile.coverUrl
     };
+    const nextGymProfile = {
+      version: 1,
+      isGym,
+      businessName: name,
+      contactPhone: isGym ? contactPhone : "",
+      website: isGym ? website : "",
+      locations: isGym ? currentGymProfile.locations.map((location) => ({
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        placeId: location.placeId,
+        active: location.active !== false
+      })) : [],
+      walletProgramRequested,
+      marketingAuthorized,
+      walletProgramStatus,
+      walletClassId: currentGymProfile.walletClassId || ""
+    };
     await sdk.setDoc(sdk.doc(sdk.db, "users", currentUser.uid), {
       uid: currentUser.uid,
       email: currentUser.email || "",
@@ -443,11 +588,17 @@ profileForm.addEventListener("submit", async (event) => {
       coverPhotoUrl: nextProfile.coverUrl,
       cover_photo_url: nextProfile.coverUrl,
       organizerProfileComplete: true,
+      organizerBusinessType: isGym ? "gym" : "community",
+      gymProfile: nextGymProfile,
+      walletMarketingConsent: marketingAuthorized,
+      walletMarketingConsentVersion: marketingAuthorized ? "2026-09" : "",
+      walletMarketingConsentAt: marketingAuthorized ? sdk.serverTimestamp() : null,
       publicOptIn: true,
       discoverable: true,
       updatedAt: sdk.serverTimestamp()
     }, { merge: true });
     renderProfile(nextProfile, currentUser);
+    renderGymProfile({ ...nextGymProfile, locations: nextGymProfile.locations });
     profileMessage.textContent = "Perfil actualizado correctamente.";
     profileMessage.classList.add("success");
     profileMessage.hidden = false;
@@ -456,7 +607,11 @@ profileForm.addEventListener("submit", async (event) => {
     profileMessage.textContent = String(error?.message).includes("image-too-large")
       ? "La imagen supera el máximo de 8 MB."
       : String(error?.message).includes("invalid-image") ? "Selecciona una imagen JPG, PNG o WebP."
-        : String(error?.message).includes("profile-name-too-short") ? "El nombre debe tener al menos 2 caracteres." : authMessage(error);
+        : String(error?.message).includes("profile-name-too-short") ? "El nombre debe tener al menos 2 caracteres."
+          : String(error?.message).includes("gym-phone-invalid") ? "Ingresa un teléfono chileno válido para el gimnasio."
+            : String(error?.message).includes("gym-website-invalid") ? "Ingresa un sitio web válido para el gimnasio."
+              : String(error?.message).includes("gym-location-required") ? "Agrega al menos una sucursal antes de solicitar la tarjeta Google Wallet."
+                : String(error?.message).includes("gym-marketing-required") ? "Confirma que el gimnasio está autorizado para enviar promociones a quienes las acepten." : authMessage(error);
     profileMessage.classList.add("error");
     profileMessage.hidden = false;
   } finally {
@@ -477,6 +632,107 @@ document.getElementById("profile-edit-toggle").addEventListener("click", (event)
 ].forEach(([inputId, labelId]) => document.getElementById(inputId).addEventListener("change", (event) => {
   document.getElementById(labelId).textContent = event.target.files[0]?.name || "Opcional";
 }));
+
+function hideGymPlaceSuggestions() {
+  gymPlaceSuggestions.hidden = true;
+  gymPlaceSuggestions.replaceChildren();
+  gymLocationAddress.setAttribute("aria-expanded", "false");
+}
+
+function showGymPlaceSuggestions(predictions) {
+  gymPlaceSuggestions.replaceChildren();
+  predictions.slice(0, 5).forEach((prediction) => {
+    const button = node("button");
+    button.type = "button";
+    button.setAttribute("role", "option");
+    const title = node("strong", "", prediction.structured_formatting?.main_text || prediction.description || "Ubicación");
+    const detail = node("span", "", prediction.structured_formatting?.secondary_text || "");
+    button.append(title, detail);
+    button.addEventListener("click", async () => {
+      hideGymPlaceSuggestions();
+      document.getElementById("gym-place-status").textContent = "Confirmando el punto geográfico…";
+      try {
+        const fields = "geometry,formatted_address,name";
+        const response = await fetch(`${PLACES_PROXY}/details?place_id=${encodeURIComponent(prediction.place_id || "")}&language=es&fields=${encodeURIComponent(fields)}`);
+        if (!response.ok) throw new Error(`details_${response.status}`);
+        const payload = await response.json();
+        const latitude = Number(payload.result?.geometry?.location?.lat);
+        const longitude = Number(payload.result?.geometry?.location?.lng);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error("missing_coordinates");
+        const address = String(payload.result?.formatted_address || prediction.description || "").trim();
+        selectedGymPlace = { address, latitude, longitude, placeId: String(prediction.place_id || "") };
+        gymLocationAddress.value = address;
+        document.getElementById("gym-place-status").textContent = "Punto geográfico confirmado.";
+      } catch (error) {
+        console.error("No fue posible confirmar la sucursal:", error);
+        selectedGymPlace = null;
+        document.getElementById("gym-place-status").textContent = "No pudimos confirmar esa dirección. Selecciona otra sugerencia.";
+      }
+      renderGymLocations();
+    });
+    gymPlaceSuggestions.append(button);
+  });
+  gymPlaceSuggestions.hidden = !gymPlaceSuggestions.childElementCount;
+  gymLocationAddress.setAttribute("aria-expanded", gymPlaceSuggestions.hidden ? "false" : "true");
+}
+
+async function searchGymPlaces(input) {
+  gymPlaceRequest?.abort();
+  const controller = new AbortController();
+  gymPlaceRequest = controller;
+  try {
+    const response = await fetch(`${PLACES_PROXY}/autocomplete?input=${encodeURIComponent(input)}&language=es`, { signal: controller.signal });
+    if (!response.ok) throw new Error(`autocomplete_${response.status}`);
+    const payload = await response.json();
+    showGymPlaceSuggestions(Array.isArray(payload.predictions) ? payload.predictions : []);
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      console.error("No fue posible buscar la sucursal:", error);
+      hideGymPlaceSuggestions();
+      document.getElementById("gym-place-status").textContent = "No pudimos buscar ubicaciones ahora. Inténtalo nuevamente.";
+    }
+  }
+}
+
+document.getElementById("profile-is-gym").addEventListener("change", (event) => {
+  gymFields.hidden = !event.target.checked;
+});
+
+document.getElementById("gym-wallet-request").addEventListener("change", (event) => {
+  document.getElementById("gym-marketing-row").hidden = !event.target.checked;
+});
+
+gymLocationAddress.addEventListener("input", (event) => {
+  selectedGymPlace = null;
+  renderGymLocations();
+  clearTimeout(gymPlaceTimer);
+  const input = event.target.value.trim();
+  document.getElementById("gym-place-status").textContent = "Escribe al menos 3 letras y selecciona una sugerencia para confirmar las coordenadas.";
+  if (input.length < 3) {
+    hideGymPlaceSuggestions();
+    return;
+  }
+  gymPlaceTimer = setTimeout(() => void searchGymPlaces(input), 320);
+});
+
+gymLocationAddButton.addEventListener("click", () => {
+  if (!selectedGymPlace || currentGymProfile.locations.length >= 10) return;
+  const name = document.getElementById("gym-location-name").value.trim() || `Sucursal ${currentGymProfile.locations.length + 1}`;
+  currentGymProfile.locations.push({
+    id: crypto.randomUUID(),
+    name: name.slice(0, 80),
+    address: selectedGymPlace.address,
+    latitude: selectedGymPlace.latitude,
+    longitude: selectedGymPlace.longitude,
+    placeId: selectedGymPlace.placeId,
+    active: true
+  });
+  selectedGymPlace = null;
+  document.getElementById("gym-location-name").value = "";
+  gymLocationAddress.value = "";
+  document.getElementById("gym-place-status").textContent = "Sucursal agregada. Puedes añadir otra o guardar el perfil.";
+  renderGymLocations();
+});
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -530,6 +786,8 @@ async function start() {
         openDashboard(user);
       } else {
         currentProfile = null;
+        currentGymProfile = emptyGymProfile();
+        selectedGymPlace = null;
         allEvents = [];
         updateStats();
         profileEditor.hidden = true;

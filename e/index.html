@@ -68,6 +68,11 @@
   .code{font-size:11px;letter-spacing:1.2px;color:var(--soft);text-align:center;margin-top:8px}
   .spinner{width:18px;height:18px;border:2px solid rgba(6,18,12,.35);
     border-top-color:#06120C;border-radius:50%;animation:spin .7s linear infinite}
+  .wallet-option{margin-top:18px;padding:18px;border:1px solid #3C4B43;border-radius:16px;
+    background:#0E1310;text-align:left}.wallet-option h2{margin:0 0 8px}.wallet-option p{margin:0}
+  .wallet-option .consent{margin:15px 0}.wallet-cta{background:#000;color:#fff;border:1px solid #5F6963}
+  .wallet-cta:disabled{opacity:.55}.wallet-note{display:block;margin-top:10px;color:var(--soft);
+    font-size:11px;line-height:1.45}.wallet-error{min-height:0;margin-bottom:0}
   @keyframes spin{to{transform:rotate(360deg)}}
   @media(max-width:360px){h1{font-size:27px}.card{padding:17px}}
 </style>
@@ -167,9 +172,10 @@ async function getPhoneSdk(){
     phoneSdkPromise=Promise.all([
       import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
       import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js'),
       import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
     ]).then(async function(modules){
-      const appSdk=modules[0],authSdk=modules[1],firestoreSdk=modules[2];
+      const appSdk=modules[0],authSdk=modules[1],functionsSdk=modules[2],firestoreSdk=modules[3];
       const name='kipzone-qr-phone';
       const existing=appSdk.getApps().find(function(item){return item.name===name;});
       const phoneApp=existing||appSdk.initializeApp({
@@ -178,10 +184,11 @@ async function getPhoneSdk(){
         appId:'1:989094287116:web:c093e38442ba31030d9b29'
       },name);
       const auth=authSdk.getAuth(phoneApp);
+      const functions=functionsSdk.getFunctions(phoneApp,'us-central1');
       const firestore=firestoreSdk.getFirestore(phoneApp);
       await authSdk.setPersistence(auth,authSdk.inMemoryPersistence);
       auth.languageCode='es';
-      return {auth:auth,sdk:authSdk,firestore:firestore,firestoreSdk:firestoreSdk};
+      return {auth:auth,sdk:authSdk,functions:functions,functionsSdk:functionsSdk,firestore:firestore,firestoreSdk:firestoreSdk};
     }).catch(function(err){phoneSdkPromise=null;throw err;});
   }
   return phoneSdkPromise;
@@ -513,6 +520,7 @@ function renderSuccess(id,token,name){
     '<div class="code">'+(eventData.checkIn?'PRESENTA ESTE QR AL LLEGAR':'COMPROBANTE PERSONAL DE INSCRIPCIÓN')+'</div>'+
     '<button id="download-receipt" class="cta receipt-download" type="button">Guardar o compartir mi QR</button>'+
     '<div id="receipt-save-fallback" class="receipt-save-fallback" hidden><p><b>Guarda tu comprobante</b><br>Mantén presionada la imagen y elige “Guardar imagen”.</p><img id="receipt-save-image" alt="Comprobante de inscripción KipZone"></div>'+
+    '<div id="wallet-option"></div>'+
     '</section><a class="cta ghost" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone y conquistar territorio</a>'+
     '<div class="hint">Guarda tu comprobante para consultar los datos de esta corrida cuando lo necesites.</div>';
   if(window.QRCode){
@@ -522,6 +530,45 @@ function renderSuccess(id,token,name){
   }else{
     const button=document.getElementById('download-receipt');
     button.disabled=true;button.textContent='No pudimos generar el QR';
+  }
+  void loadWalletOption(id,token);
+}
+async function loadWalletOption(registrationId,personalQrToken){
+  const root=document.getElementById('wallet-option');
+  if(!root)return;
+  try{
+    const client=await getPhoneSdk();
+    const callable=client.functionsSdk.httpsCallable(client.functions,'getGoogleWalletProgram');
+    const result=await callable({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
+    const program=result.data||{};
+    if(program.ok!==true||program.available!==true)return;
+    const programName=program.programName||'el gimnasio';
+    root.className='wallet-option';
+    root.innerHTML='<h2>Guarda tu tarjeta</h2><p>Agrega la tarjeta de <b>'+esc(programName)+'</b> a Google Wallet.</p>'+
+      '<label class="consent"><input id="wallet-marketing" type="checkbox"><span>Quiero recibir promociones de '+esc(programName)+'. Si lo aceptas, Google Wallet también podrá mostrarte un aviso cuando estés cerca de una sede.</span></label>'+
+      '<button id="wallet-add" class="cta wallet-cta" type="button">Agregar a Google Wallet</button>'+
+      '<small class="wallet-note">La promoción es opcional. Google decide la distancia y el momento de los avisos de cercanía.</small>'+
+      '<div id="wallet-error" class="error wallet-error" role="alert"></div>';
+    document.getElementById('wallet-add').addEventListener('click',async function(){
+      const button=this,errorBox=document.getElementById('wallet-error');
+      button.disabled=true;button.innerHTML='<span class="spinner"></span> Preparando tarjeta…';errorBox.textContent='';
+      try{
+        const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletPass');
+        const response=await create({
+          eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken,
+          marketingConsent:document.getElementById('wallet-marketing').checked
+        });
+        const saveUrl=String(response.data&&response.data.saveUrl||'');
+        if(!saveUrl.startsWith('https://pay.google.com/'))throw new Error('INVALID_WALLET_URL');
+        location.assign(saveUrl);
+      }catch(error){
+        console.error('No fue posible crear la tarjeta Google Wallet:',error);
+        errorBox.textContent='Tu inscripción está confirmada, pero no pudimos abrir Google Wallet. Inténtalo nuevamente más tarde.';
+        button.disabled=false;button.textContent='Agregar a Google Wallet';
+      }
+    });
+  }catch(_){
+    // La inscripción y su QR siguen funcionando aunque Wallet aún no esté activado.
   }
 }
 async function loadEvent(){
