@@ -189,9 +189,18 @@ async function uploadFlyer(user, requestId) {
   const file = document.getElementById("flyer").files[0];
   if (!file || !file.type.startsWith("image/")) throw new Error("invalid-image");
   if (file.size > 8 * 1024 * 1024) throw new Error("image-too-large");
-  const extension = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
-  const target = sdk.ref(sdk.storage, `users/${user.uid}/event-flyers/${requestId}/flyer-${Date.now()}.${extension}`);
-  await sdk.uploadBytes(target, file, { contentType: file.type, cacheControl: "public,max-age=31536000" });
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const sourceX = Math.max(0, (bitmap.width - side) / 2);
+  const sourceY = Math.max(0, (bitmap.height - side) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 1200;
+  canvas.getContext("2d").drawImage(bitmap, sourceX, sourceY, side, side, 0, 0, 1200, 1200);
+  bitmap.close();
+  const squareFile = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("invalid-image")), "image/jpeg", 0.9));
+  const target = sdk.ref(sdk.storage, `users/${user.uid}/event-flyers/${requestId}/flyer-${Date.now()}.jpg`);
+  await sdk.uploadBytes(target, squareFile, { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" });
   return sdk.getDownloadURL(target);
 }
 
