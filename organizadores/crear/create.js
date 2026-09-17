@@ -312,6 +312,7 @@ createForm.addEventListener("submit", async (event) => {
       radiusKm: online ? 0 : 1,
       placeId: online ? "" : selectedPlace.placeId,
       discoverable: document.getElementById("discoverable").checked,
+      googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
       topics: [...selectedTopics],
       imageUrl: image,
       creationSource: "organizer_web",
