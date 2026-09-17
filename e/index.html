@@ -11,7 +11,7 @@
 <style>
   :root{
     --bg:#0A0E0C;--surface:#151C18;--surface2:#1C2621;--line:#2A3730;
-    --text:#F2F5F3;--soft:#9AA79F;--accent:#35D07F;--danger:#FF6B6B;
+    --text:#F2F5F3;--soft:#B7C2BC;--accent:#35D07F;--danger:#FF6B6B;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);min-height:100vh;
@@ -551,6 +551,10 @@ async function loadWalletOption(registrationId,personalQrToken){
       try{
         const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletEventTicket');
         const response=await create({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
+        if(response.data?.pendingApproval===true){
+          errorBox.textContent=String(response.data?.message||'Google está revisando esta entrada. Tu inscripción y QR siguen válidos; vuelve a intentarlo más tarde.');
+          button.disabled=false;button.textContent='Reintentar Google Wallet';return;
+        }
         const saveUrl=String(response.data?.saveUrl||'');
         if(!saveUrl.startsWith('https://pay.google.com/gp/v/save/'))throw new Error('INVALID_WALLET_URL');
         location.assign(saveUrl);
