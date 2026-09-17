@@ -54,6 +54,7 @@ function fillForm(data) {
   document.getElementById("payment-link").value = data.paymentLink || "";
   document.getElementById("image-url").value = data.imageUrl || data.imagen || data.photo || data.image || "";
   document.getElementById("status").textContent = data.status === "Inactivo" ? "Inactivo" : "Activo";
+  document.getElementById("google-wallet-enabled").checked = data.googleWalletEnabled === true;
   const discoverable = document.getElementById("discoverable");
   discoverable.checked = data.discoverable !== false;
   discoverable.disabled = recurring;
@@ -300,6 +301,7 @@ editForm.addEventListener("submit", async (event) => {
       radiusKm: Math.max(0.1, Number(eventData.radiusKm) || 1),
       imageUrl: image,
       discoverable: document.getElementById("discoverable").checked,
+      googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
       ticketingEnabled,
       ticketPlan: String(eventData.ticketPlan || "free_only"),
       ticketCapacity: Math.max(0, Number(eventData.ticketCapacity) || 0),
