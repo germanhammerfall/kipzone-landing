@@ -8,7 +8,7 @@
   <meta name="description" content="Publica un evento o social run en KipZone.">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="stylesheet" href="../style.css">
-  <link rel="stylesheet" href="form.css?v=20260917-event-form">
+  <link rel="stylesheet" href="form.css?v=20260917-event-form-2">
 </head>
 <body class="wizard-page">
   <header class="wizard-header"><a href="/organizadores/">← Volver</a><strong>KipZone</strong><span>Nuevo evento</span></header>
@@ -26,8 +26,8 @@
     <section class="form-section">
       <div class="section-heading"><span>1</span><div><h2>Información principal</h2><p>Nombre, descripción y una imagen clara para reconocer el evento.</p></div></div>
       <div class="section-fields">
-        <label>Nombre del evento<input id="title" minlength="5" maxlength="80" required placeholder="Ej: Social Run Parque Bicentenario"></label>
-        <label>Descripción del evento<textarea id="description" rows="7" minlength="20" maxlength="1500" required placeholder="Cuenta de qué se trata, ritmo, distancia, nivel y recomendaciones."></textarea><span class="field-count"><b id="description-count">0</b>/1500</span></label>
+        <label>Nombre del grupo o evento<input id="title" minlength="5" maxlength="80" required placeholder="Ej: Social Run Parque Bicentenario"></label>
+        <label>Descripción del grupo o evento<textarea id="description" rows="7" minlength="20" maxlength="1500" required placeholder="Cuenta de qué se trata, ritmo, distancia, nivel y recomendaciones."></textarea><span class="field-count"><b id="description-count">0</b>/1500</span></label>
         <fieldset class="photo-field"><legend>Foto del evento</legend><div class="photo-layout"><label class="photo-picker event-photo"><input id="flyer" type="file" accept="image/jpeg,image/png,image/webp" required><span id="photo-placeholder"><b>Agregar foto</b><small>JPG, PNG o WebP · máximo 8 MB · formato 1:1</small></span><img id="photo-preview" alt="Vista previa de la foto del evento" hidden></label><div class="photo-copy"><strong>Tu evento, reconocible al instante</strong><p>Usa una imagen cuadrada. Podrás reemplazarla antes de publicar.</p><button id="remove-photo" type="button" class="text-button" hidden>Quitar foto</button></div></div></fieldset>
       </div>
     </section>
@@ -62,7 +62,7 @@
   </form>
 
   <section id="success-view" class="wizard-success" hidden><span>✓</span><p class="eyebrow">Evento publicado</p><h1>Ya está en KipZone.</h1><p id="success-copy"></p><a id="success-link" class="button primary" href="/organizadores/perfil/">Ver el evento</a></section>
-  <script type="module" src="create.js?v=20260917-event-form"></script>
+  <script type="module" src="create.js?v=20260917-event-form-2"></script>
 </body>
 </html>
 
