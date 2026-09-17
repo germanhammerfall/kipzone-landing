@@ -538,37 +538,30 @@ async function loadWalletOption(registrationId,personalQrToken){
   if(!root)return;
   try{
     const client=await getPhoneSdk();
-    const callable=client.functionsSdk.httpsCallable(client.functions,'getGoogleWalletProgram');
-    const result=await callable({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
-    const program=result.data||{};
-    if(program.ok!==true||program.available!==true)return;
-    const programName=program.programName||'el gimnasio';
+    const availability=client.functionsSdk.httpsCallable(client.functions,'getGoogleWalletEventTicket');
+    const available=await availability({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
+    if(available.data?.ok!==true||available.data?.available!==true)return;
     root.className='wallet-option';
-    root.innerHTML='<h2>Guarda tu tarjeta</h2><p>Agrega la tarjeta de <b>'+esc(programName)+'</b> a Google Wallet.</p>'+
-      '<label class="consent"><input id="wallet-marketing" type="checkbox"><span>Quiero recibir promociones de '+esc(programName)+'. Si lo aceptas, Google Wallet también podrá mostrarte un aviso cuando estés cerca de una sede.</span></label>'+
+    root.innerHTML='<h2>Entrada en Google Wallet</h2><p>Guarda una copia opcional de tu entrada con el mismo QR personal.</p>'+
       '<button id="wallet-add" class="cta wallet-cta" type="button">Agregar a Google Wallet</button>'+
-      '<small class="wallet-note">La promoción es opcional. Google decide la distancia y el momento de los avisos de cercanía.</small>'+
       '<div id="wallet-error" class="error wallet-error" role="alert"></div>';
     document.getElementById('wallet-add').addEventListener('click',async function(){
       const button=this,errorBox=document.getElementById('wallet-error');
-      button.disabled=true;button.innerHTML='<span class="spinner"></span> Preparando tarjeta…';errorBox.textContent='';
+      button.disabled=true;button.innerHTML='<span class="spinner"></span> Preparando entrada…';errorBox.textContent='';
       try{
-        const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletPass');
-        const response=await create({
-          eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken,
-          marketingConsent:document.getElementById('wallet-marketing').checked
-        });
-        const saveUrl=String(response.data&&response.data.saveUrl||'');
-        if(!saveUrl.startsWith('https://pay.google.com/'))throw new Error('INVALID_WALLET_URL');
+        const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletEventTicket');
+        const response=await create({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
+        const saveUrl=String(response.data?.saveUrl||'');
+        if(!saveUrl.startsWith('https://pay.google.com/gp/v/save/'))throw new Error('INVALID_WALLET_URL');
         location.assign(saveUrl);
       }catch(error){
-        console.error('No fue posible crear la tarjeta Google Wallet:',error);
-        errorBox.textContent='Tu inscripción está confirmada, pero no pudimos abrir Google Wallet. Inténtalo nuevamente más tarde.';
+        console.error('No fue posible crear la entrada Google Wallet:',error);
+        errorBox.textContent='Tu inscripción y QR siguen válidos. No pudimos abrir Google Wallet; inténtalo nuevamente más tarde.';
         button.disabled=false;button.textContent='Agregar a Google Wallet';
       }
     });
   }catch(_){
-    // La inscripción y su QR siguen funcionando aunque Wallet aún no esté activado.
+    // La inscripción y su QR siguen funcionando si Wallet está desactivado o falla.
   }
 }
 async function loadEvent(){
