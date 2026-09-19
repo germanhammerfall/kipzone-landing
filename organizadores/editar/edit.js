@@ -109,11 +109,33 @@ async function choosePlace(placeId, description) {
     const address = String(payload.result?.formatted_address || description).trim();
     selectedPlace = { latitude, longitude, address, placeId };
     document.getElementById("address").value = address;
+    updatePlaceStatus();
+    return true;
   } catch (error) {
     console.error("No fue posible confirmar la ubicación:", error);
     selectedPlace = null;
+    updatePlaceStatus();
+    return false;
   }
-  updatePlaceStatus();
+}
+
+async function resolveTypedAddress() {
+  if (selectedPlace) return true;
+  const input = document.getElementById("address").value.trim();
+  if (input.length < 3) return false;
+  document.getElementById("place-status").textContent = "Buscando el punto geográfico…";
+  try {
+    const response = await fetch(`${PLACES_PROXY}/autocomplete?input=${encodeURIComponent(input)}&language=es`);
+    if (!response.ok) throw new Error(`autocomplete_${response.status}`);
+    const payload = await response.json();
+    const first = Array.isArray(payload.predictions) ? payload.predictions[0] : null;
+    if (!first?.place_id) throw new Error("place_not_found");
+    return choosePlace(String(first.place_id), String(first.description || input));
+  } catch (error) {
+    console.error("No fue posible resolver la dirección escrita:", error);
+    document.getElementById("place-status").textContent = "No encontramos esa dirección. Agrega ciudad y comuna e inténtalo nuevamente.";
+    return false;
+  }
 }
 
 function showPlaceSuggestions(predictions) {
@@ -267,8 +289,8 @@ editForm.addEventListener("submit", async (event) => {
     message.hidden = false;
     return;
   }
-  if (!selectedPlace) {
-    message.textContent = "Busca la dirección y selecciona una sugerencia para confirmar el punto geográfico.";
+  if (!selectedPlace && !await resolveTypedAddress()) {
+    message.textContent = "No pudimos ubicar esa dirección. Escribe calle, ciudad y comuna; luego vuelve a guardar.";
     message.classList.remove("success");
     message.hidden = false;
     return;
