@@ -105,4 +105,5 @@ body.modal-open{overflow:hidden}.attendee-modal[hidden]{display:none}.attendee-m
 .event-edit-fields .toggle-row{border-color:rgba(255,255,255,.14);background:#111814;color:#f2f5f3}
 .event-edit-fields .toggle-row b,.event-edit-fields .toggle-row label,.event-edit-fields .event-visibility,.event-editor .event-visibility{color:#f2f5f3}
 .event-edit-fields .toggle-row span,.event-edit-fields .toggle-row small,.event-edit-fields .field-help,.event-editor .field-help{color:#b7c2bc}
-.event-edit-fields input,.event-edit-fields textarea,.event-edit-fields select{color:#f2f5f3}
+.event-edit-fields input,.event-edit-fields textarea,.event-edit-fields select{color:#101310}
+.event-edit-fields input::placeholder,.event-edit-fields textarea::placeholder{color:#707973;opacity:1}
