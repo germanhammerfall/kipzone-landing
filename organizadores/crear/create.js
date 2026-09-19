@@ -144,12 +144,34 @@ async function choosePlace(placeId, description) {
     document.getElementById("address").value = address;
     document.getElementById("place-status").textContent = "Punto de encuentro confirmado.";
     document.getElementById("place-status").classList.add("confirmed");
+    updateProgress();
+    return true;
   } catch (error) {
     console.error("No fue posible confirmar la ubicación:", error);
     selectedPlace = null;
     document.getElementById("place-status").textContent = "No pudimos confirmar ese lugar. Intenta nuevamente.";
+    updateProgress();
+    return false;
   }
-  updateProgress();
+}
+
+async function resolveTypedAddress() {
+  if (selectedPlace) return true;
+  const input = document.getElementById("address").value.trim();
+  if (input.length < 3) return false;
+  document.getElementById("place-status").textContent = "Buscando el punto de encuentro…";
+  try {
+    const response = await fetch(`${PLACES_PROXY}/autocomplete?input=${encodeURIComponent(input)}&language=es`);
+    if (!response.ok) throw new Error(`autocomplete_${response.status}`);
+    const payload = await response.json();
+    const first = Array.isArray(payload.predictions) ? payload.predictions[0] : null;
+    if (!first?.place_id) throw new Error("place_not_found");
+    return choosePlace(String(first.place_id), String(first.description || input));
+  } catch (error) {
+    console.error("No fue posible resolver la dirección escrita:", error);
+    document.getElementById("place-status").textContent = "No encontramos esa dirección. Agrega ciudad y comuna e inténtalo nuevamente.";
+    return false;
+  }
 }
 
 function showPlaceSuggestions(predictions) {
@@ -291,7 +313,7 @@ createForm.addEventListener("submit", async (event) => {
   const nextStart = recurring ? nextWeeklyOccurrence(weekdays, time) : combineDateAndTime(document.getElementById("event-date").value, time);
   const online = attendanceMode() === "online";
   if (!nextStart || (recurring && !weekdays.length)) return showError(recurring ? "Selecciona al menos un día y una hora." : "Selecciona una fecha y hora válidas.");
-  if (!online && !selectedPlace) return showError("Busca el punto de encuentro y selecciona una sugerencia.");
+  if (!online && !selectedPlace && !await resolveTypedAddress()) return showError("No pudimos ubicar esa dirección. Escribe calle, ciudad y comuna; luego vuelve a publicar.");
   if (selectedTopics.size < 3) return showError("Elige al menos 3 temas para el evento.");
   if (!document.getElementById("flyer").files[0]) return showError("Agrega una foto del evento.");
   if (isPaid() && online) return showError("Por ahora los eventos online solo pueden publicarse como gratuitos.");
