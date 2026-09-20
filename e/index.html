@@ -254,6 +254,7 @@ function renderEvent(doc){
     distance:val(f.distanciaEstimada)||0,enabled:val(f.webRegistrationEnabled)!==false,
     requireRut:val(f.webRegistrationRequireRut)===true,
     checkIn:val(f.webRegistrationCheckInEnabled)===true,
+    walletEnabled:val(f.googleWalletEnabled)===true,
     closed:val(f.webRegistrationClosed)===true
   };
   const e=eventData;
@@ -531,41 +532,32 @@ function renderSuccess(id,token,name){
     const button=document.getElementById('download-receipt');
     button.disabled=true;button.textContent='No pudimos generar el QR';
   }
-  void loadWalletOption(id,token);
+  void startWalletIfEnabled(id,token);
 }
-async function loadWalletOption(registrationId,personalQrToken){
+async function startWalletIfEnabled(registrationId,personalQrToken){
+  if(!eventData.walletEnabled)return;
   const root=document.getElementById('wallet-option');
   if(!root)return;
+  root.className='wallet-option';
+  root.innerHTML='<h2>Preparando tu entrada de Google Wallet</h2><p>Tu inscripción y QR ya son válidos. Abriremos Google Wallet enseguida.</p>'+
+    '<div class="wallet-note">Si Google está revisando esta clase, podrás volver a abrir este enlace más tarde.</div>'+
+    '<div id="wallet-error" class="error wallet-error" role="alert"></div>';
   try{
     const client=await getPhoneSdk();
-    const availability=client.functionsSdk.httpsCallable(client.functions,'getGoogleWalletEventTicket');
-    const available=await availability({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
-    if(available.data?.ok!==true||available.data?.available!==true)return;
-    root.className='wallet-option';
-    root.innerHTML='<h2>Entrada en Google Wallet</h2><p>Guarda una copia opcional de tu entrada con el mismo QR personal.</p>'+
-      '<button id="wallet-add" class="cta wallet-cta" type="button">Agregar a Google Wallet</button>'+
-      '<div id="wallet-error" class="error wallet-error" role="alert"></div>';
-    document.getElementById('wallet-add').addEventListener('click',async function(){
-      const button=this,errorBox=document.getElementById('wallet-error');
-      button.disabled=true;button.innerHTML='<span class="spinner"></span> Preparando entrada…';errorBox.textContent='';
-      try{
-        const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletEventTicket');
-        const response=await create({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
-        if(response.data?.pendingApproval===true){
-          errorBox.textContent=String(response.data?.message||'Google está revisando esta entrada. Tu inscripción y QR siguen válidos; vuelve a intentarlo más tarde.');
-          button.disabled=false;button.textContent='Reintentar Google Wallet';return;
-        }
-        const saveUrl=String(response.data?.saveUrl||'');
-        if(!saveUrl.startsWith('https://pay.google.com/gp/v/save/'))throw new Error('INVALID_WALLET_URL');
-        location.assign(saveUrl);
-      }catch(error){
-        console.error('No fue posible crear la entrada Google Wallet:',error);
-        errorBox.textContent='Tu inscripción y QR siguen válidos. No pudimos abrir Google Wallet; inténtalo nuevamente más tarde.';
-        button.disabled=false;button.textContent='Agregar a Google Wallet';
-      }
-    });
-  }catch(_){
-    // La inscripción y su QR siguen funcionando si Wallet está desactivado o falla.
+    const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletEventTicket');
+    const response=await create({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
+    if(response.data?.pendingApproval===true){
+      document.getElementById('wallet-error').textContent=String(response.data?.message||
+        'Google está revisando la entrada. Tu inscripción y QR siguen válidos; vuelve a abrir este enlace más tarde.');
+      return;
+    }
+    const saveUrl=String(response.data?.saveUrl||'');
+    if(!saveUrl.startsWith('https://pay.google.com/gp/v/save/'))throw new Error('INVALID_WALLET_URL');
+    location.assign(saveUrl);
+  }catch(error){
+    console.error('No fue posible crear la entrada Google Wallet:',error);
+    document.getElementById('wallet-error').textContent=
+      'Tu inscripción y QR siguen válidos. No pudimos abrir Google Wallet; vuelve a abrir este enlace más tarde.';
   }
 }
 async function loadEvent(){
