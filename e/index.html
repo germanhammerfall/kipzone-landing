@@ -540,7 +540,7 @@ async function startWalletIfEnabled(registrationId,personalQrToken){
   if(!root)return;
   root.className='wallet-option';
   root.innerHTML='<h2>Preparando tu entrada de Google Wallet</h2><p>Tu inscripción y QR ya son válidos. Abriremos Google Wallet enseguida.</p>'+
-    '<div class="wallet-note">Si Google está revisando esta clase, podrás volver a abrir este enlace más tarde.</div>'+
+    '<div class="wallet-note">La tarjeta usa este mismo evento y tu QR personal.</div>'+
     '<div id="wallet-error" class="error wallet-error" role="alert"></div>';
   try{
     const client=await getPhoneSdk();
@@ -548,7 +548,7 @@ async function startWalletIfEnabled(registrationId,personalQrToken){
     const response=await create({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
     if(response.data?.pendingApproval===true){
       document.getElementById('wallet-error').textContent=String(response.data?.message||
-        'Google está revisando la entrada. Tu inscripción y QR siguen válidos; vuelve a abrir este enlace más tarde.');
+        'Google Wallet todavía no está disponible. Tu inscripción y QR siguen válidos; vuelve a abrir este enlace más tarde.');
       return;
     }
     const saveUrl=String(response.data?.saveUrl||'');
