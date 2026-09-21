@@ -1,0 +1,17 @@
+# Cache de kipzone.run
+#
+# Las paginas HTML no se guardan sin preguntar: el navegador vuelve a
+# consultarlas en cada visita y el servidor responde "sin cambios" cuando no
+# los hay. Sin esto, alguien podia seguir viendo el panel de hace dias aunque
+# ya estuviera publicada una version nueva.
+#
+# El resto de archivos (JS, CSS) ya llevan un numero de version en la direccion,
+# asi que cambiarlos basta para que el navegador los pida de nuevo.
+
+/*
+  Cache-Control: no-cache
+
+# Imagenes y tipografias: cambian de nombre cuando cambian, se pueden guardar
+# durante un ano sin volver a preguntar.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
