@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f0d">
+<meta name="robots" content="noindex">
+<title>Canje de beneficio · KipZone</title>
+<link rel="icon" href="/favicon.ico?v=20260902-3" sizes="any">
+<style>
+  :root{--bg:#0b0f0d;--card:#141a17;--line:rgba(255,255,255,.12);--text:#f2f5f3;--soft:#9ba5a0;--ok:#8fe31d;--warn:#ffc95a;--bad:#ff8d7c}
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 16px 40px;background:var(--bg);color:var(--text);
+    font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{width:min(520px,100%);margin:auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:18px 0;border-bottom:1px solid var(--line)}
+  header strong{font-size:1.05rem}
+  header span{color:var(--soft);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+  .tally{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+  .tally div{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+  .tally b{display:block;color:var(--ok);font-size:2rem;line-height:1}
+  .tally small{color:var(--soft);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+  #scanner{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;
+    background:#000;aspect-ratio:1/1}
+  #scanner video{width:100%;height:100%;object-fit:cover}
+  #scanner .frame{position:absolute;inset:18%;border:3px solid rgba(143,227,29,.7);border-radius:18px}
+  #result{margin:18px 0;padding:22px 20px;border:1px solid var(--line);border-radius:20px;
+    background:var(--card);text-align:center}
+  #result h1{margin:0 0 6px;font-size:1.5rem;line-height:1.2}
+  #result p{margin:0;color:var(--soft);font-size:.92rem}
+  #result.valid{border-color:var(--ok);background:#1b3121}
+  #result.valid h1{color:var(--ok)}
+  #result.already{border-color:var(--warn);background:#312818}
+  #result.already h1{color:var(--warn)}
+  #result.bad{border-color:var(--bad);background:#3a1e1c}
+  #result.bad h1{color:var(--bad)}
+  form{display:grid;gap:10px;margin:16px 0}
+  label{color:var(--soft);font-size:.78rem;font-weight:700}
+  input{width:100%;min-height:54px;padding:14px;border:1px solid #d7dcd8;border-radius:14px;
+    background:#fff;color:#111;font:inherit;text-transform:uppercase}
+  button{min-height:54px;padding:0 20px;border:0;border-radius:999px;background:var(--ok);
+    color:#0b0f0d;font:inherit;font-weight:800;cursor:pointer}
+  button.ghost{border:1px solid var(--line);background:transparent;color:var(--text)}
+  button:disabled{opacity:.5}
+  .hint{margin:14px 0 0;color:var(--soft);font-size:.8rem;line-height:1.5}
+  .setup{padding:22px 20px;border:1px solid var(--line);border-radius:20px;background:var(--card)}
+  .setup h1{margin:0 0 10px;font-size:1.3rem}
+</style>
+</head>
+<body>
+<main>
+  <header><strong id="event-title">Canje de beneficio</strong><span>KipZone</span></header>
+
+  <section id="setup" class="setup" hidden>
+    <h1>Falta el enlace completo</h1>
+    <p class="hint">Pide al organizador el enlace de canje de este evento. Incluye un código
+      de acceso y es el que debes abrir para escanear.</p>
+  </section>
+
+  <div id="panel" hidden>
+    <div class="tally">
+      <div><b id="tally-today">0</b><small>Hoy</small></div>
+      <div><b id="tally-total">0</b><small>En total</small></div>
+    </div>
+
+    <div id="result" hidden></div>
+
+    <div id="scanner" hidden><video id="video" playsinline muted></video><div class="frame"></div></div>
+
+    <form id="manual-form">
+      <label for="manual">Número de boleto</label>
+      <input id="manual" maxlength="20" inputmode="text" autocomplete="off"
+        placeholder="Ej: 83107406FD6D">
+      <button type="submit">Canjear</button>
+      <button type="button" id="camera-toggle" class="ghost">Usar la cámara</button>
+    </form>
+
+    <p class="hint">El participante muestra el QR de su entrada, en Google Wallet o en el
+      comprobante web. Si la cámara no lo lee, escribe el número de boleto que aparece en
+      la tarjeta.</p>
+  </div>
+</main>
+
+<script type="module">
+const API_KEY = "AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE";
+const PROJECT = "red-social-1cn89d";
+const params = new URLSearchParams(location.search);
+const eventId = (params.get("event") || "").trim();
+const code = (params.get("code") || "").trim().toUpperCase();
+
+const panel = document.getElementById("panel");
+const setup = document.getElementById("setup");
+const result = document.getElementById("result");
+const scanner = document.getElementById("scanner");
+const video = document.getElementById("video");
+const manual = document.getElementById("manual");
+const cameraToggle = document.getElementById("camera-toggle");
+let callRedeem, callSummary;
+let detector = null;
+let scanning = false;
+let lastScan = "";
+let lastScanAt = 0;
+
+function show(kind, title, detail) {
+  result.hidden = false;
+  result.className = kind;
+  result.innerHTML = "";
+  const heading = document.createElement("h1");
+  const text = document.createElement("p");
+  heading.textContent = title;
+  text.textContent = detail || "";
+  result.append(heading, text);
+}
+
+function stamp(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
+}
+
+async function loadSummary() {
+  try {
+    const response = await callSummary({ eventId, code });
+    document.getElementById("tally-today").textContent = String(response.data?.today ?? 0);
+    document.getElementById("tally-total").textContent = String(response.data?.total ?? 0);
+  } catch (error) {
+    console.error("No fue posible cargar el conteo:", error);
+  }
+}
+
+async function redeem(scan) {
+  try {
+    const response = await callRedeem({ eventId, code, scan });
+    const data = response.data || {};
+    if (data.result === "valid") {
+      show("valid", "Canje válido", data.fullName + (data.benefit ? " · " + data.benefit : ""));
+      void loadSummary();
+    } else if (data.result === "already") {
+      show("already", "Ya fue canjeado", data.fullName +
+        (data.redeemedAt ? " · " + stamp(data.redeemedAt) : ""));
+    } else {
+      show("bad", "No válido", data.message || "Ese código no corresponde a este evento.");
+    }
+  } catch (error) {
+    console.error("No fue posible canjear:", error);
+    const reason = String(error?.code || "");
+    show("bad", "No pudimos canjear", reason.includes("permission-denied")
+      ? "El enlace de canje ya no es válido. Pídele uno nuevo al organizador."
+      : "Revisa la conexión e inténtalo nuevamente.");
+  }
+}
+
+async function startCamera() {
+  if (!("BarcodeDetector" in window)) {
+    show("bad", "Cámara no disponible",
+      "Este navegador no puede leer QR. Escribe el número de boleto.");
+    return;
+  }
+  try {
+    detector = detector || new window.BarcodeDetector({ formats: ["qr_code"] });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } }, audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    scanner.hidden = false;
+    cameraToggle.textContent = "Apagar la cámara";
+    scanning = true;
+    void loop();
+  } catch (error) {
+    console.error("No fue posible abrir la cámara:", error);
+    show("bad", "Sin acceso a la cámara",
+      "Permite la cámara en el navegador, o escribe el número de boleto.");
+  }
+}
+
+function stopCamera() {
+  scanning = false;
+  const stream = video.srcObject;
+  if (stream) stream.getTracks().forEach((track) => track.stop());
+  video.srcObject = null;
+  scanner.hidden = true;
+  cameraToggle.textContent = "Usar la cámara";
+}
+
+async function loop() {
+  while (scanning) {
+    try {
+      const codes = await detector.detect(video);
+      const value = codes[0]?.rawValue || "";
+      // Sin esta pausa, dejar el QR frente a la camara dispararia el canje
+      // decenas de veces por segundo.
+      if (value && (value !== lastScan || Date.now() - lastScanAt > 4000)) {
+        lastScan = value;
+        lastScanAt = Date.now();
+        await redeem(value);
+      }
+    } catch (_) { /* un fotograma ilegible no interrumpe el escaneo */ }
+    await new Promise((done) => setTimeout(done, 350));
+  }
+}
+
+cameraToggle.addEventListener("click", () => {
+  if (scanning) stopCamera(); else void startCamera();
+});
+
+document.getElementById("manual-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const value = manual.value.trim();
+  if (!value) return;
+  manual.value = "";
+  await redeem(value);
+});
+
+async function start() {
+  if (!eventId || !code) {
+    setup.hidden = false;
+    return;
+  }
+  const [appSdk, functionsSdk] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js"),
+  ]);
+  const app = appSdk.getApps().length ? appSdk.getApp()
+    : appSdk.initializeApp({ apiKey: API_KEY, projectId: PROJECT,
+      authDomain: PROJECT + ".firebaseapp.com" });
+  const functions = functionsSdk.getFunctions(app, "us-central1");
+  callRedeem = functionsSdk.httpsCallable(functions, "redeemEventBenefit");
+  callSummary = functionsSdk.httpsCallable(functions, "eventBenefitSummary");
+  panel.hidden = false;
+  await loadSummary();
+  void startCamera();
+}
+
+void start();
+</script>
+</body>
+</html>

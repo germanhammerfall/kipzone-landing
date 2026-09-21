@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0f0d">
   <title>Editar evento | KipZone</title>
-  <link rel="stylesheet" href="../style.css?v=20260921-messages">
+  <link rel="stylesheet" href="../style.css?v=20260921-canje">
 </head>
 <body class="event-edit-page">
   <header class="event-edit-header"><a href="/organizadores/perfil/">← Mis eventos</a><strong>KipZone</strong><span>Edición segura</span></header>
@@ -40,6 +40,17 @@
         <ul id="sponsor-list" class="sponsor-list"></ul>
         <label class="event-visibility"><input id="sponsor-include-event" type="checkbox"><span>Avisar también al pasar cerca del punto de partida</span></label>
         <p class="event-field-help">Solo llega a quienes tengan Android y hayan activado las notificaciones desde Google Wallet.</p>
+        <div class="redeem-box">
+          <strong>Enlace de canje para el auspiciador</strong>
+          <p>Quien atiende en el local abre este enlace y escanea el QR de cada participante. No necesita cuenta.</p>
+          <code id="redeem-link">—</code>
+          <div class="redeem-actions">
+            <button id="redeem-copy" class="button secondary" type="button">Copiar enlace</button>
+            <button id="redeem-rotate" class="button secondary" type="button">Generar uno nuevo</button>
+          </div>
+          <p id="redeem-count" class="message-quota"></p>
+          <p class="event-field-help">Al generar uno nuevo, el anterior deja de funcionar al instante.</p>
+        </div>
       </div></section>
       <div class="event-edit-save static"><div><strong>Guardar auspiciador</strong><span id="sponsor-note">Se guarda por separado del resto del evento.</span></div><button id="sponsor-save" class="button primary" type="button">Guardar auspiciador</button></div>
     </section>
@@ -59,6 +70,6 @@
       </div></section>
     </section>
   </main>
-  <script type="module" src="edit.js?v=20260921-messages"></script>
+  <script type="module" src="edit.js?v=20260921-canje"></script>
 </body>
 </html>

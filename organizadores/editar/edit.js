@@ -223,6 +223,7 @@ async function loadEvent(user) {
     fillSponsor(eventData);
     toggleMessagesSection();
     void loadMessages();
+    void loadRedeemAccess();
     showOnly(editView);
   } catch (error) {
     console.error("No fue posible abrir el evento para editar:", error);
@@ -708,3 +709,59 @@ messageSendButton.addEventListener("click", async () => {
 });
 
 walletCheckbox.addEventListener("change", toggleMessagesSection);
+
+/* ---------------------------------------------------------------------------
+   Enlace de canje del beneficio.
+
+   El local no necesita cuenta: el enlace lleva un codigo de acceso y eso es
+   todo lo que hace falta para escanear. Si hay que cortarle el acceso, se
+   genera uno nuevo y el anterior deja de servir al instante.
+--------------------------------------------------------------------------- */
+const redeemLink = document.getElementById("redeem-link");
+const redeemCount = document.getElementById("redeem-count");
+const redeemCopyButton = document.getElementById("redeem-copy");
+const redeemRotateButton = document.getElementById("redeem-rotate");
+let redeemUrl = "";
+
+function showRedeemAccess(data) {
+  const code = String(data?.code || "");
+  if (!code) return;
+  redeemUrl = `${location.origin}/canje/?event=${encodeURIComponent(eventId)}&code=${encodeURIComponent(code)}`;
+  redeemLink.textContent = redeemUrl;
+  const redeemed = Number(data?.redeemed) || 0;
+  redeemCount.textContent = redeemed === 1
+    ? "1 persona ha canjeado el beneficio."
+    : `${redeemed} personas han canjeado el beneficio.`;
+}
+
+async function loadRedeemAccess(rotate = false) {
+  try {
+    const response = await sdk.httpsCallable(sdk.functions, "getEventBenefitAccess")({ eventId, rotate });
+    showRedeemAccess(response.data);
+  } catch (error) {
+    console.error("No fue posible obtener el enlace de canje:", error);
+    redeemLink.textContent = "No pudimos generar el enlace.";
+  }
+}
+
+redeemCopyButton.addEventListener("click", async () => {
+  if (!redeemUrl) return;
+  try {
+    await navigator.clipboard.writeText(redeemUrl);
+    flashSaved(redeemCopyButton, "Copiar enlace", "Copiado ✓");
+  } catch (_) {
+    // Sin permiso de portapapeles queda seleccionado para copiar a mano.
+    const range = document.createRange();
+    range.selectNodeContents(redeemLink);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+});
+
+redeemRotateButton.addEventListener("click", async () => {
+  redeemRotateButton.disabled = true;
+  redeemRotateButton.textContent = "Generando…";
+  await loadRedeemAccess(true);
+  flashSaved(redeemRotateButton, "Generar uno nuevo", "Listo ✓");
+});
