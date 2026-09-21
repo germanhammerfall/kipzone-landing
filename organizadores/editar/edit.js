@@ -207,6 +207,7 @@ async function loadEvent(user) {
       return;
     }
     fillForm(eventData);
+    fillSponsor(eventData);
     showOnly(editView);
   } catch (error) {
     console.error("No fue posible abrir el evento para editar:", error);
@@ -389,3 +390,176 @@ async function start() {
 }
 
 start();
+
+/* ---------------------------------------------------------------------------
+   Auspiciador de la tarjeta de Google Wallet.
+
+   Va aparte del formulario principal, con su propio boton de guardado, para no
+   tocar el camino de edicion del evento que ya funciona. Reusa el mismo proxy
+   de direcciones que el buscador de arriba, asi que no agrega dependencias.
+--------------------------------------------------------------------------- */
+const MAX_SPONSOR_PLACES = 10;
+const sponsorSection = document.getElementById("sponsor-section");
+const sponsorInput = document.getElementById("sponsor-address");
+const sponsorStatus = document.getElementById("sponsor-status");
+const sponsorSuggestions = document.getElementById("sponsor-suggestions");
+const sponsorSaveButton = document.getElementById("sponsor-save");
+const walletCheckbox = document.getElementById("google-wallet-enabled");
+let sponsorPlaces = [];
+let sponsorTimer;
+let sponsorRequest;
+
+function sponsorSay(text, ok) {
+  sponsorStatus.textContent = text;
+  sponsorStatus.classList.toggle("confirmed", Boolean(ok));
+}
+
+function toggleSponsorSection() {
+  sponsorSection.hidden = !walletCheckbox.checked;
+}
+
+function hideSponsorSuggestions() {
+  sponsorSuggestions.hidden = true;
+  sponsorSuggestions.replaceChildren();
+  sponsorInput.setAttribute("aria-expanded", "false");
+}
+
+function renderSponsorPlaces() {
+  const list = document.getElementById("sponsor-list");
+  list.replaceChildren();
+  sponsorPlaces.forEach((place, index) => {
+    const row = document.createElement("li");
+    const text = document.createElement("div");
+    const name = document.createElement("strong");
+    const coords = document.createElement("span");
+    const remove = document.createElement("button");
+    name.textContent = place.name;
+    coords.textContent = `${place.latitude.toFixed(5)}, ${place.longitude.toFixed(5)}`;
+    remove.type = "button";
+    remove.textContent = "Quitar";
+    remove.addEventListener("click", () => {
+      sponsorPlaces.splice(index, 1);
+      renderSponsorPlaces();
+      sponsorSay(`Quedan ${MAX_SPONSOR_PLACES - sponsorPlaces.length} lugares disponibles.`);
+    });
+    text.append(name, coords);
+    row.append(text, remove);
+    list.append(row);
+  });
+}
+
+async function addSponsorPlace(placeId, description) {
+  hideSponsorSuggestions();
+  if (sponsorPlaces.length >= MAX_SPONSOR_PLACES) {
+    sponsorSay(`Google solo admite ${MAX_SPONSOR_PLACES} lugares por tarjeta. Quita uno antes de agregar otro.`);
+    return;
+  }
+  sponsorSay("Confirmando el punto geográfico…");
+  try {
+    const fields = "geometry,formatted_address,name";
+    const response = await fetch(`${PLACES_PROXY}/details?place_id=${encodeURIComponent(placeId)}&language=es&fields=${encodeURIComponent(fields)}`);
+    if (!response.ok) throw new Error(`details_${response.status}`);
+    const payload = await response.json();
+    const latitude = Number(payload.result?.geometry?.location?.lat);
+    const longitude = Number(payload.result?.geometry?.location?.lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) throw new Error("missing_coordinates");
+    const name = String(payload.result?.name || payload.result?.formatted_address || description).trim();
+    if (sponsorPlaces.some((place) => place.latitude === latitude && place.longitude === longitude)) {
+      sponsorSay("Ese lugar ya está en la lista.");
+      return;
+    }
+    sponsorPlaces.push({ name: name.slice(0, 120), latitude, longitude });
+    sponsorInput.value = "";
+    renderSponsorPlaces();
+    sponsorSay(`${name} agregado. No olvides guardar.`, true);
+  } catch (error) {
+    console.error("No fue posible confirmar el local del auspiciador:", error);
+    sponsorSay("No encontramos ese lugar. Agrega ciudad y comuna e inténtalo nuevamente.");
+  }
+}
+
+function showSponsorSuggestions(predictions) {
+  sponsorSuggestions.replaceChildren();
+  predictions.slice(0, 5).forEach((prediction) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("role", "option");
+    const title = document.createElement("strong");
+    const detail = document.createElement("span");
+    title.textContent = prediction.structured_formatting?.main_text || prediction.description || "Ubicación";
+    detail.textContent = prediction.structured_formatting?.secondary_text || "";
+    button.append(title, detail);
+    button.addEventListener("click", () => void addSponsorPlace(String(prediction.place_id || ""), String(prediction.description || "")));
+    sponsorSuggestions.append(button);
+  });
+  sponsorSuggestions.hidden = !sponsorSuggestions.childElementCount;
+  sponsorInput.setAttribute("aria-expanded", sponsorSuggestions.hidden ? "false" : "true");
+}
+
+async function searchSponsorPlaces(input) {
+  sponsorRequest?.abort();
+  const controller = new AbortController();
+  sponsorRequest = controller;
+  try {
+    const response = await fetch(`${PLACES_PROXY}/autocomplete?input=${encodeURIComponent(input)}&language=es`, { signal: controller.signal });
+    if (!response.ok) throw new Error(`autocomplete_${response.status}`);
+    const payload = await response.json();
+    showSponsorSuggestions(Array.isArray(payload.predictions) ? payload.predictions : []);
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      console.error("No fue posible buscar el local del auspiciador:", error);
+      hideSponsorSuggestions();
+    }
+  }
+}
+
+function fillSponsor(data) {
+  const sponsor = data?.walletSponsor || {};
+  sponsorPlaces = (Array.isArray(sponsor.locations) ? sponsor.locations : [])
+    .map((place) => ({
+      name: String(place?.name || "Sede").slice(0, 120),
+      latitude: Number(place?.latitude),
+      longitude: Number(place?.longitude)
+    }))
+    .filter((place) => Number.isFinite(place.latitude) && Number.isFinite(place.longitude))
+    .slice(0, MAX_SPONSOR_PLACES);
+  document.getElementById("sponsor-benefits").value = String(sponsor.benefits || "");
+  document.getElementById("sponsor-include-event").checked = sponsor.includeEventLocation === true;
+  renderSponsorPlaces();
+  sponsorSay(sponsorPlaces.length
+    ? `${sponsorPlaces.length} de ${MAX_SPONSOR_PLACES} lugares cargados.`
+    : `Puedes agregar hasta ${MAX_SPONSOR_PLACES} locales.`);
+  toggleSponsorSection();
+}
+
+sponsorInput.addEventListener("input", (event) => {
+  const input = event.target.value.trim();
+  clearTimeout(sponsorTimer);
+  if (input.length < 3) {
+    hideSponsorSuggestions();
+    return;
+  }
+  sponsorTimer = setTimeout(() => void searchSponsorPlaces(input), 320);
+});
+
+walletCheckbox.addEventListener("change", toggleSponsorSection);
+
+sponsorSaveButton.addEventListener("click", async () => {
+  sponsorSaveButton.disabled = true;
+  sponsorSaveButton.textContent = "Guardando…";
+  try {
+    await callOrganizerFunction(sdk, "setGoogleWalletEventSponsor", {
+      eventId,
+      benefits: document.getElementById("sponsor-benefits").value.trim(),
+      includeEventLocation: document.getElementById("sponsor-include-event").checked,
+      locations: sponsorPlaces
+    });
+    sponsorSay("Auspiciador guardado. Las tarjetas se actualizan solas.", true);
+  } catch (error) {
+    console.error("No fue posible guardar el auspiciador:", error);
+    sponsorSay("No pudimos guardar el auspiciador. Revisa tu conexión e inténtalo nuevamente.");
+  } finally {
+    sponsorSaveButton.disabled = false;
+    sponsorSaveButton.textContent = "Guardar auspiciador";
+  }
+});

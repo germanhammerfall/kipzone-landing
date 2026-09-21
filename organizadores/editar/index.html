@@ -31,7 +31,19 @@
       <section class="event-edit-section"><div class="event-edit-section-title"><span>4</span><div><h2>Publicación</h2><p>Revisa el estado y la visibilidad.</p></div></div><div class="event-edit-fields"><div class="event-status-readonly"><span>Estado</span><strong id="status">Activo</strong><small>Mi perfil muestra únicamente eventos activos.</small></div><label class="event-visibility"><input id="google-wallet-enabled" type="checkbox"><span>Ofrecer entrada en Google Wallet</span></label><p class="event-field-help">Es opcional para el corredor y no reemplaza el QR normal.</p><label class="event-visibility"><input id="discoverable" type="checkbox"><span>Mostrar públicamente</span></label><p id="visibility-hint" class="event-field-help" hidden>En eventos recurrentes la visibilidad se conserva y se administra desde la app.</p></div></section>
       <div class="event-edit-save"><div><strong>Guardar sobre el evento original</strong><span id="save-note">Los participantes y el territorio no se modifican.</span></div><button id="save-submit" class="button primary" type="submit">Guardar cambios</button></div>
     </form>
+    <section class="event-edit-form" id="sponsor-section" hidden>
+      <section class="event-edit-section"><div class="event-edit-section-title"><span>5</span><div><h2>Auspiciador</h2><p>Su beneficio viaja dentro de la tarjeta de Google Wallet, y la notificación aparece al pasar cerca de sus locales.</p></div></div><div class="event-edit-fields">
+        <label>Beneficio que verá el corredor<textarea id="sponsor-benefits" rows="3" maxlength="500" placeholder="Ej: 15% de descuento en la mensualidad presentando esta tarjeta."></textarea></label>
+        <div class="edit-place-search"><label>Agregar local del auspiciador<input id="sponsor-address" maxlength="220" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sponsor-suggestions" placeholder="Escribe la dirección y elige una sugerencia"></label>
+        <p id="sponsor-status" class="event-field-help">Puedes agregar hasta 10 locales.</p>
+        <div id="sponsor-suggestions" class="edit-place-suggestions" role="listbox" hidden></div></div>
+        <ul id="sponsor-list" class="sponsor-list"></ul>
+        <label class="event-visibility"><input id="sponsor-include-event" type="checkbox"><span>Avisar también al pasar cerca del punto de partida</span></label>
+        <p class="event-field-help">Solo llega a quienes tengan Android y hayan activado las notificaciones desde Google Wallet.</p>
+      </div></section>
+      <div class="event-edit-save"><div><strong>Guardar auspiciador</strong><span id="sponsor-note">Se guarda por separado del resto del evento.</span></div><button id="sponsor-save" class="button primary" type="button">Guardar auspiciador</button></div>
+    </section>
   </main>
-  <script type="module" src="edit.js?v=20260919-address-fix"></script>
+  <script type="module" src="edit.js?v=20260921-sponsor"></script>
 </body>
 </html>

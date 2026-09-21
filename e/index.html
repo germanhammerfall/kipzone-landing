@@ -136,6 +136,16 @@ function validRut(v){
 function occurrenceKey(d){return String(Math.floor(d.getTime()/1000));}
 function eventDocUrl(){return DB+'/run_events/'+encodeURIComponent(eventId);}
 function registrationId(uid,start){return uid+'_'+occurrenceKey(start);}
+function storageKey(uid,start){return 'kz_registration_'+eventId+'_'+occurrenceKey(start)+'_'+uid;}
+function forgetLegacyRegistration(start){
+  // Las versiones anteriores guardaban la inscripcion con una clave sin el uid,
+  // asi que dos personas en el mismo navegador -o un mismo telefono que cambio
+  // de uid- compartian la entrada. Esa entrada ademas se usaba sin comprobar
+  // que el documento siguiera existiendo, de modo que una inscripcion borrada
+  // en el servidor mandaba a Google Wallet un id muerto y la callable
+  // respondia not-found.
+  try{localStorage.removeItem('kz_registration_'+eventId+'_'+occurrenceKey(start));}catch(_){}
+}
 function registrationUrl(id){return eventDocUrl()+'/web_registrations/'+encodeURIComponent(id);}
 function registrationCreateUrl(id){return eventDocUrl()+'/web_registrations?documentId='+encodeURIComponent(id);}
 function readAuth(){try{return JSON.parse(localStorage.getItem(AUTH_STORAGE)||'null');}catch(_){return null;}}
@@ -347,52 +357,55 @@ async function submitRegistration(ev){
     const auth=saveAuth({uid:user.uid,idToken:idToken,refreshToken:user.refreshToken,
       expiresAt:Date.now()+55*60*1000,phone:phone,provider:'phone'});
     const id=registrationId(auth.uid,eventData.start);
-    const saved=JSON.parse(localStorage.getItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start))||'null');
-    if(saved&&saved.token){renderSuccess(saved.id,saved.token,fullName);return;}
-    // Ya inscrito, pero desde otro dispositivo.
+    forgetLegacyRegistration(eventData.start);
+    const registrationRef=firebaseClient.firestoreSdk.doc(firebaseClient.firestore,'run_events',eventId,'web_registrations',id);
+    // El documento en Firestore es la unica fuente de verdad.
     //
-    // El id del documento es determinista (uid + inicio de la ocurrencia) y el
-    // uid lo fija el numero de telefono, asi que quien se inscribio en el PC y
-    // abre el enlace en el movil apunta al MISMO documento. Sin esta consulta
-    // el POST de mas abajo deja de ser un create y Firestore lo evalua como
-    // update, que solo permite el organizador: 403, y la pagina lo traducia a
-    // "la inscripcion todavia no esta habilitada para este evento", que hacia
+    // El id es determinista (uid + inicio de la ocurrencia) y el uid lo fija el
+    // numero de telefono, asi que quien se inscribio en el PC y abre el enlace
+    // en el movil apunta al MISMO documento. Consultarlo antes de escribir
+    // cubre tres casos de una sola vez: reinscripcion desde otro dispositivo,
+    // recarga de la pagina y reintento despues de un error. Sin esta consulta
+    // el setDoc deja de ser un create y Firestore lo evalua como update, que
+    // solo permite el organizador: 403, y la pagina lo traducia a "la
+    // inscripcion todavia no esta habilitada para este evento", que hacia
     // pensar en un problema de configuracion del evento.
     //
     // No es un caso raro: es lo que pasa siempre que alguien se inscribe en un
     // sitio y quiere su QR en otro, que es justo lo que necesita al llegar a
-    // la corrida. localStorage no cubre eso porque vive en un solo navegador.
+    // la corrida.
+    //
+    // localStorage nunca decide nada aqui. Es solo una cache por navegador y
+    // puede apuntar a un documento que ya no existe; cuando eso pasaba, la
+    // tarjeta de Google Wallet se pedia con un id muerto y la callable
+    // respondia not-found.
     //
     // Las reglas permiten leer la inscripcion propia (allow get exige que
-    // authUid coincida con el uid del token), asi que el QR se recupera del
-    // servidor. Si la lectura falla da igual el motivo -no existe, o el token
-    // todavia no vale-: se sigue al create de siempre.
+    // authUid coincida con el uid del token). Si la lectura falla da igual el
+    // motivo -no existe, o el token todavia no vale-: se sigue al create.
+    let token='',displayName=fullName;
     try{
-      const registrationRef=firebaseClient.firestoreSdk.doc(firebaseClient.firestore,'run_events',eventId,'web_registrations',id);
       const existing=await firebaseClient.firestoreSdk.getDoc(registrationRef);
       const existingData=existing.exists()?existing.data():null;
-      const existingToken=existingData&&existingData.personalQrToken;
-      if(existingToken){
-        const existingName=existingData.fullName||fullName;
-        localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),
-          JSON.stringify({id:id,token:existingToken}));
-        renderSuccess(id,existingToken,existingName);
-        return;
+      if(existingData&&existingData.personalQrToken){
+        token=existingData.personalQrToken;
+        displayName=existingData.fullName||fullName;
       }
     }catch(_){}
-    const token=randomToken();
-    const registrationRef=firebaseClient.firestoreSdk.doc(firebaseClient.firestore,'run_events',eventId,'web_registrations',id);
-    await firebaseClient.firestoreSdk.setDoc(registrationRef,{
-      fullName:fullName,phone:phone,rut:rut,
-      source:'event_qr_web',status:'registered',
-      authUid:auth.uid,
-      occurrenceStart:firebaseClient.firestoreSdk.Timestamp.fromDate(eventData.start),
-      registeredAt:firebaseClient.firestoreSdk.serverTimestamp(),
-      privacyConsent:true,privacyVersion:'2026-08',personalQrToken:token,
-      checkInEnabled:!!eventData.checkIn
-    });
-    localStorage.setItem('kz_registration_'+eventId+'_'+occurrenceKey(eventData.start),JSON.stringify({id:id,token:token}));
-    renderSuccess(id,token,fullName);
+    if(!token){
+      token=randomToken();
+      await firebaseClient.firestoreSdk.setDoc(registrationRef,{
+        fullName:fullName,phone:phone,rut:rut,
+        source:'event_qr_web',status:'registered',
+        authUid:auth.uid,
+        occurrenceStart:firebaseClient.firestoreSdk.Timestamp.fromDate(eventData.start),
+        registeredAt:firebaseClient.firestoreSdk.serverTimestamp(),
+        privacyConsent:true,privacyVersion:'2026-08',personalQrToken:token,
+        checkInEnabled:!!eventData.checkIn
+      });
+    }
+    try{localStorage.setItem(storageKey(auth.uid,eventData.start),JSON.stringify({id:id,token:token}));}catch(_){}
+    renderSuccess(id,token,displayName);
   }catch(err){
     console.error('No fue posible confirmar la inscripción por SMS:',err);
     if(err.status===409)errorBox.textContent='Tu inscripción para esta fecha ya fue registrada.';
@@ -534,6 +547,18 @@ function renderSuccess(id,token,name){
   }
   void startWalletIfEnabled(id,token);
 }
+// Mensajes por codigo de la callable. Se mapean aqui, en el cliente, para no
+// mostrar nunca el texto que viene del backend: el codigo basta para saber que
+// paso y no lleva telefono, nombre, QR ni claves.
+const WALLET_MESSAGES={
+  'functions/not-found':'No encontramos tu inscripcion para este evento.',
+  'functions/permission-denied':'Esta inscripcion pertenece a otro telefono o no esta activa.',
+  'functions/unauthenticated':'Confirma tu telefono para obtener la entrada.',
+  'functions/failed-precondition':'Este evento todavia no tiene Google Wallet habilitado.',
+  'functions/invalid-argument':'Los datos de la inscripcion no son validos.',
+  'functions/already-exists':'Ya existe una entrada distinta para esta inscripcion.',
+  'functions/unavailable':'Google Wallet no responde en este momento.'
+};
 async function startWalletIfEnabled(registrationId,personalQrToken){
   if(!eventData.walletEnabled)return;
   const root=document.getElementById('wallet-option');
@@ -555,9 +580,12 @@ async function startWalletIfEnabled(registrationId,personalQrToken){
     if(!saveUrl.startsWith('https://pay.google.com/gp/v/save/'))throw new Error('INVALID_WALLET_URL');
     location.assign(saveUrl);
   }catch(error){
-    console.error('No fue posible crear la entrada Google Wallet:',error);
+    const code=String(error&&error.code||'desconocido');
+    console.error('No fue posible crear la entrada Google Wallet:',code,error);
     document.getElementById('wallet-error').textContent=
-      'Tu inscripción y QR siguen válidos. No pudimos abrir Google Wallet; vuelve a abrir este enlace más tarde.';
+      'Tu inscripción y QR siguen válidos. '+
+      (WALLET_MESSAGES[code]||'No pudimos abrir Google Wallet; vuelve a abrir este enlace más tarde.')+
+      ' (código: '+code+')';
   }
 }
 async function loadEvent(){
