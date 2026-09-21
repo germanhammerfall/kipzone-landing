@@ -18,6 +18,19 @@ let selectedPlace;
 let placeTimer;
 let placeRequest;
 
+/* Confirmacion visible en el boton: sin esto, guardar y no guardar se veian
+   exactamente igual. */
+function flashSaved(button, label, done = "Guardado \u2713") {
+  button.disabled = true;
+  button.classList.add("saved");
+  button.textContent = done;
+  setTimeout(() => {
+    button.classList.remove("saved");
+    button.textContent = label;
+    button.disabled = false;
+  }, 2600);
+}
+
 function showOnly(view) {
   loading.hidden = view !== loading;
   loginGate.hidden = view !== loginGate;
@@ -208,6 +221,8 @@ async function loadEvent(user) {
     }
     fillForm(eventData);
     fillSponsor(eventData);
+    toggleMessagesSection();
+    void loadMessages();
     showOnly(editView);
   } catch (error) {
     console.error("No fue posible abrir el evento para editar:", error);
@@ -363,15 +378,16 @@ editForm.addEventListener("submit", async (event) => {
     message.classList.add("success");
     message.hidden = false;
     message.scrollIntoView({ behavior: "smooth", block: "center" });
+    flashSaved(saveButton, "Guardar cambios");
+    return;
   } catch (error) {
     console.error("No fue posible guardar el evento:", error);
     message.textContent = String(error?.message).includes("image-too-large") ? "El flyer supera el máximo de 8 MB." : authMessage(error);
     message.classList.remove("success");
     message.hidden = false;
-  } finally {
-    saveButton.disabled = false;
-    saveButton.textContent = "Guardar cambios";
   }
+  saveButton.disabled = false;
+  saveButton.textContent = "Guardar cambios";
 });
 
 async function start() {
@@ -555,11 +571,140 @@ sponsorSaveButton.addEventListener("click", async () => {
       locations: sponsorPlaces
     });
     sponsorSay("Auspiciador guardado. Las tarjetas se actualizan solas.", true);
+    flashSaved(sponsorSaveButton, "Guardar auspiciador");
+    return;
   } catch (error) {
     console.error("No fue posible guardar el auspiciador:", error);
     sponsorSay("No pudimos guardar el auspiciador. Revisa tu conexión e inténtalo nuevamente.");
-  } finally {
-    sponsorSaveButton.disabled = false;
-    sponsorSaveButton.textContent = "Guardar auspiciador";
   }
+  sponsorSaveButton.disabled = false;
+  sponsorSaveButton.textContent = "Guardar auspiciador";
 });
+
+/* ---------------------------------------------------------------------------
+   Mensajes a quienes guardaron la tarjeta.
+
+   Escribir y leer pasa por dos funciones del servidor, no por Firestore
+   directo: asi la comprobacion de que el evento es tuyo se hace del lado que
+   no se puede manipular, y no hay que abrir reglas nuevas de lectura.
+--------------------------------------------------------------------------- */
+const messagesSection = document.getElementById("messages-section");
+const messageHeader = document.getElementById("message-header");
+const messageBody = document.getElementById("message-body");
+const messageSendAt = document.getElementById("message-send-at");
+const messageSendButton = document.getElementById("message-send");
+const messageStatus = document.getElementById("message-status");
+const messageQuota = document.getElementById("message-quota");
+
+const MESSAGE_STATES = {
+  sent: ["sent", "Enviado"],
+  scheduled: ["scheduled", "Programado"],
+  pending: ["pending", "En curso"],
+  rate_limited: ["error", "Límite diario"],
+  invalid: ["error", "Incompleto"],
+  failed: ["error", "Falló"],
+  event_missing: ["error", "Evento no encontrado"],
+  wallet_disabled: ["error", "Wallet apagado"]
+};
+
+function messageSay(text, ok) {
+  messageStatus.textContent = text;
+  messageStatus.classList.toggle("confirmed", Boolean(ok));
+}
+
+function toggleMessagesSection() {
+  messagesSection.hidden = !walletCheckbox.checked;
+}
+
+function messageWhen(item) {
+  if (item.status === "scheduled" && item.sendAt) {
+    return "Programado para " + new Date(item.sendAt).toLocaleString("es-CL",
+      { dateStyle: "medium", timeStyle: "short" });
+  }
+  const stamp = item.sentAt || item.createdAt;
+  return stamp ? new Date(stamp).toLocaleString("es-CL",
+    { dateStyle: "medium", timeStyle: "short" }) : "";
+}
+
+function renderMessages(messages, remainingToday) {
+  const list = document.getElementById("message-list");
+  list.replaceChildren();
+  messages.forEach((item) => {
+    const [tone, label] = MESSAGE_STATES[item.status] || ["pending", item.status];
+    const row = document.createElement("li");
+    const title = document.createElement("strong");
+    const body = document.createElement("p");
+    const foot = document.createElement("span");
+    const state = document.createElement("em");
+    title.textContent = item.header;
+    body.textContent = item.body;
+    state.className = "message-state " + tone;
+    state.textContent = label;
+    foot.append(state, document.createTextNode(" " + messageWhen(item)));
+    if (item.error) {
+      const why = document.createElement("span");
+      why.textContent = item.error;
+      row.append(title, body, foot, why);
+    } else {
+      row.append(title, body, foot);
+    }
+    list.append(row);
+  });
+  messageQuota.textContent = remainingToday > 0
+    ? `Te quedan ${remainingToday} de 3 notificaciones para las próximas 24 horas.`
+    : "Ya usaste las 3 notificaciones de las últimas 24 horas. El próximo mensaje quedará retenido.";
+}
+
+async function loadMessages() {
+  try {
+    const response = await sdk.httpsCallable(sdk.functions, "listGoogleWalletEventMessages")({ eventId });
+    const data = response.data || {};
+    renderMessages(Array.isArray(data.messages) ? data.messages : [], Number(data.remainingToday) || 0);
+  } catch (error) {
+    console.error("No fue posible cargar los mensajes:", error);
+    messageSay("No pudimos cargar los mensajes enviados.");
+  }
+}
+
+messageSendAt.addEventListener("change", () => {
+  messageSendButton.textContent = messageSendAt.value ? "Programar" : "Enviar ahora";
+});
+
+messageSendButton.addEventListener("click", async () => {
+  const header = messageHeader.value.trim();
+  const body = messageBody.value.trim();
+  if (!header || !body) {
+    messageSay("Escribe el título y el texto antes de enviar.");
+    return;
+  }
+  const scheduled = Boolean(messageSendAt.value);
+  const label = scheduled ? "Programar" : "Enviar ahora";
+  messageSendButton.disabled = true;
+  messageSendButton.textContent = scheduled ? "Programando…" : "Enviando…";
+  try {
+    await callOrganizerFunction(sdk, "createGoogleWalletEventMessage", {
+      eventId,
+      header,
+      body,
+      sendAt: scheduled ? new Date(messageSendAt.value).toISOString() : ""
+    });
+    messageHeader.value = "";
+    messageBody.value = "";
+    messageSendAt.value = "";
+    messageSay(scheduled
+      ? "Mensaje programado. Sale solo a la hora que elegiste."
+      : "Mensaje enviado. Revisa el estado en la lista de abajo.", true);
+    flashSaved(messageSendButton, "Enviar ahora", scheduled ? "Programado ✓" : "Enviado ✓");
+    // El envio ocurre en el servidor un instante despues de crear el mensaje.
+    setTimeout(() => void loadMessages(), 1200);
+    setTimeout(() => void loadMessages(), 5000);
+    return;
+  } catch (error) {
+    console.error("No fue posible enviar el mensaje:", error);
+    messageSay("No pudimos enviar el mensaje. Revisa tu conexión e inténtalo nuevamente.");
+  }
+  messageSendButton.disabled = false;
+  messageSendButton.textContent = label;
+});
+
+walletCheckbox.addEventListener("change", toggleMessagesSection);

@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0f0d">
   <title>Editar evento | KipZone</title>
-  <link rel="stylesheet" href="../style.css?v=20260919-address-fix">
+  <link rel="stylesheet" href="../style.css?v=20260921-messages">
 </head>
 <body class="event-edit-page">
   <header class="event-edit-header"><a href="/organizadores/perfil/">← Mis eventos</a><strong>KipZone</strong><span>Edición segura</span></header>
@@ -41,9 +41,24 @@
         <label class="event-visibility"><input id="sponsor-include-event" type="checkbox"><span>Avisar también al pasar cerca del punto de partida</span></label>
         <p class="event-field-help">Solo llega a quienes tengan Android y hayan activado las notificaciones desde Google Wallet.</p>
       </div></section>
-      <div class="event-edit-save"><div><strong>Guardar auspiciador</strong><span id="sponsor-note">Se guarda por separado del resto del evento.</span></div><button id="sponsor-save" class="button primary" type="button">Guardar auspiciador</button></div>
+      <div class="event-edit-save static"><div><strong>Guardar auspiciador</strong><span id="sponsor-note">Se guarda por separado del resto del evento.</span></div><button id="sponsor-save" class="button primary" type="button">Guardar auspiciador</button></div>
+    </section>
+    <section class="event-edit-form" id="messages-section" hidden>
+      <section class="event-edit-section"><div class="event-edit-section-title"><span>6</span><div><h2>Mensajes</h2><p>Llegan como notificación a quienes guardaron la tarjeta. Solo texto, y solo en Android.</p></div></div><div class="event-edit-fields">
+        <div class="message-form">
+          <label>Título<input id="message-header" maxlength="60" placeholder="Ej: Cambio de punto de partida"></label>
+          <label>Texto<textarea id="message-body" rows="3" maxlength="500" placeholder="Ej: Nos juntamos en la plaza, no en el gimnasio."></textarea></label>
+          <div class="message-when">
+            <label>Enviar el<input id="message-send-at" type="datetime-local"><small class="event-field-help">Déjalo vacío para enviarlo ahora mismo.</small></label>
+            <button id="message-send" class="button primary" type="button">Enviar ahora</button>
+          </div>
+          <p id="message-quota" class="message-quota"></p>
+          <p id="message-status" class="event-field-help">Google permite 3 notificaciones por tarjeta cada 24 horas.</p>
+        </div>
+        <ul id="message-list" class="message-list"></ul>
+      </div></section>
     </section>
   </main>
-  <script type="module" src="edit.js?v=20260921-sponsor"></script>
+  <script type="module" src="edit.js?v=20260921-messages"></script>
 </body>
 </html>
