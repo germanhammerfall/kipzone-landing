@@ -73,6 +73,8 @@
   .wallet-option .consent{margin:15px 0}.wallet-cta{background:#000;color:#fff;border:1px solid #5F6963}
   .wallet-cta:disabled{opacity:.55}.wallet-note{display:block;margin-top:10px;color:var(--soft);
     font-size:11px;line-height:1.45}.wallet-error{min-height:0;margin-bottom:0}
+  .apple-wallet-link{display:inline-block;line-height:0;margin:2px 0}.apple-wallet-link img{display:block;width:160px;height:auto;max-width:100%}
+  .wallet-option-apple{text-align:center}
   @keyframes spin{to{transform:rotate(360deg)}}
   @media(max-width:360px){h1{font-size:27px}.card{padding:17px}}
 </style>
@@ -83,6 +85,7 @@
   <div id="app"><div class="state">Cargando el evento…</div></div>
 </main>
 <script src="./qrcode.min.js"></script>
+<script src="./wallet-options.js"></script>
 <script>
 const PROJECT = 'red-social-1cn89d';
 const API_KEY = 'AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE';
@@ -265,6 +268,7 @@ function renderEvent(doc){
     requireRut:val(f.webRegistrationRequireRut)===true,
     checkIn:val(f.webRegistrationCheckInEnabled)===true,
     walletEnabled:val(f.googleWalletEnabled)===true,
+    appleWalletEnabled:val(f.appleWalletEnabled)===true,
     closed:val(f.webRegistrationClosed)===true
   };
   const e=eventData;
@@ -545,7 +549,7 @@ function renderSuccess(id,token,name){
     const button=document.getElementById('download-receipt');
     button.disabled=true;button.textContent='No pudimos generar el QR';
   }
-  void startWalletIfEnabled(id,token);
+  showWalletOptions(id,token);
 }
 // Mensajes por codigo de la callable. Se mapean aqui, en el cliente, para no
 // mostrar nunca el texto que viene del backend: el codigo basta para saber que
@@ -559,6 +563,27 @@ const WALLET_MESSAGES={
   'functions/already-exists':'Ya existe una entrada distinta para esta inscripcion.',
   'functions/unavailable':'Google Wallet no responde en este momento.'
 };
+function showWalletOptions(registrationId,personalQrToken){
+  const mode=window.kipzoneWalletOptions({userAgent:navigator.userAgent,
+    platform:navigator.platform,
+    googleEnabled:eventData.walletEnabled,appleEnabled:eventData.appleWalletEnabled});
+  if(mode.autoGoogle){void startWalletIfEnabled(registrationId,personalQrToken);return;}
+  if(!mode.apple)return;
+  const root=document.getElementById('wallet-option');
+  if(!root)return;
+  root.className='wallet-option wallet-option-apple';
+  const link=document.createElement('a');
+  link.className='apple-wallet-link';
+  link.href='https://us-central1-red-social-1cn89d.cloudfunctions.net/appleWalletEventTicket?event='+
+    encodeURIComponent(eventId)+'&registration='+encodeURIComponent(registrationId)+
+    '&token='+encodeURIComponent(personalQrToken);
+  link.setAttribute('aria-label','Añadir a Apple Wallet');
+  const badge=document.createElement('img');
+  badge.src='/assets/add-to-apple-wallet-es.svg';
+  badge.alt='Añadir a Apple Wallet';
+  link.appendChild(badge);
+  root.appendChild(link);
+}
 async function startWalletIfEnabled(registrationId,personalQrToken){
   if(!eventData.walletEnabled)return;
   const root=document.getElementById('wallet-option');

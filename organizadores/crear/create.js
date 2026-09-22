@@ -335,6 +335,7 @@ createForm.addEventListener("submit", async (event) => {
       placeId: online ? "" : selectedPlace.placeId,
       discoverable: document.getElementById("discoverable").checked,
       googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
+      appleWalletEnabled: document.getElementById("apple-wallet-enabled").checked,
       topics: [...selectedTopics],
       imageUrl: image,
       creationSource: "organizer_web",
