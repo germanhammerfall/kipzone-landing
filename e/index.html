@@ -583,6 +583,10 @@ function showWalletOptions(registrationId,personalQrToken){
   badge.alt='Añadir a Apple Wallet';
   link.appendChild(badge);
   root.appendChild(link);
+  // En iPhone, abrir el pase inmediatamente despues de confirmar la
+  // inscripcion. iOS conserva la confirmacion final "Añadir"; el distintivo
+  // queda visible como respaldo si la persona vuelve a esta pagina.
+  window.setTimeout(function(){location.assign(link.href);},0);
 }
 async function startWalletIfEnabled(registrationId,personalQrToken){
   if(!eventData.walletEnabled)return;
