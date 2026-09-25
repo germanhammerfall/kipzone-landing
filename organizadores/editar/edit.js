@@ -647,22 +647,50 @@ sponsorSaveButton.addEventListener("click", async () => {
   sponsorSaveButton.disabled = true;
   sponsorSaveButton.textContent = "Guardando…";
   try {
-    const name = document.getElementById("sponsor-name").value.trim();
-    const benefits = document.getElementById("sponsor-benefits").value.trim();
-    const redemptionAddress = document.getElementById("sponsor-redemption-address").value.trim();
-    if (!name || !benefits || !redemptionAddress || !sponsorPlaces.length) {
-      throw new Error("incomplete-sponsor");
-    }
-    const logoUrls = await uploadSponsorLogo();
-    await callOrganizerFunction(sdk, "setGoogleWalletEventSponsor", {
+    const nameInput = document.getElementById("sponsor-name");
+    const benefitsInput = document.getElementById("sponsor-benefits");
+    const redemptionInput = document.getElementById("sponsor-redemption-address");
+    const name = nameInput.value.trim();
+    const benefits = benefitsInput.value.trim();
+    const redemptionAddress = redemptionInput.value.trim();
+    if (!name) { nameInput.focus(); throw new Error("missing-sponsor-name"); }
+    if (!benefits) { benefitsInput.focus(); throw new Error("missing-sponsor-benefit"); }
+    if (!redemptionAddress) { redemptionInput.focus(); throw new Error("missing-redemption-address"); }
+    if (!sponsorPlaces.length) { sponsorInput.focus(); throw new Error("missing-sponsor-place"); }
+
+    const payload = {
       eventId,
       name,
       benefits,
       redemptionAddress,
-      logoUrls,
+      logoUrls: sponsorLogoUrls,
       includeEventLocation: false,
       locations: sponsorPlaces
-    });
+    };
+
+    // Los datos esenciales se guardan antes de procesar la imagen. De esta
+    // forma una foto incompatible o una falla de Storage nunca vuelve a
+    // impedir que se guarden el beneficio, el gimnasio y la dirección.
+    await callOrganizerFunction(sdk, "setGoogleWalletEventSponsor", payload);
+
+    if (sponsorLogoInput.files[0]) {
+      try {
+        const uploadedLogoUrls = await uploadSponsorLogo();
+        await callOrganizerFunction(sdk, "setGoogleWalletEventSponsor", {
+          ...payload,
+          logoUrls: uploadedLogoUrls,
+        });
+      } catch (logoError) {
+        console.error("Los datos se guardaron, pero no fue posible subir el logo:", logoError);
+        sponsorSay("Nombre, beneficio y dirección guardados. El logo no se pudo subir; prueba con un PNG o JPG menor a 5 MB.", true);
+        flashSaved(sponsorSaveButton, "Guardar auspiciador", "Datos guardados ✓");
+        return;
+      }
+    }
+
+    eventData.walletSponsor = { name, benefits, redemptionAddress,
+      logoUrls: sponsorLogoUrls, locations: sponsorPlaces.map((place) => ({ ...place })),
+      includeEventLocation: false };
     sponsorLogoInput.value = "";
     clearSponsorLogoPreviewUrl();
     renderSponsorLogo();
@@ -671,10 +699,16 @@ sponsorSaveButton.addEventListener("click", async () => {
     return;
   } catch (error) {
     console.error("No fue posible guardar el auspiciador:", error);
-    sponsorSay(error?.message === "incomplete-sponsor"
-      ? "Completa nombre, beneficio, dirección visible y al menos un local del auspiciador."
-      : error?.message === "sponsor-logo-too-large" ? "El logo supera el máximo de 5 MB."
-      : "No pudimos guardar el auspiciador. Revisa el logo o tu conexión e inténtalo nuevamente.");
+    const messages = {
+      "missing-sponsor-name": "Falta el nombre del auspiciador.",
+      "missing-sponsor-benefit": "Falta el beneficio que verá el corredor.",
+      "missing-redemption-address": "Falta la dirección visible de canje.",
+      "missing-sponsor-place": "Agrega el local desde una sugerencia para guardar sus coordenadas.",
+      "functions/unauthenticated": "Tu sesión venció. Vuelve a iniciar sesión.",
+      "functions/permission-denied": "Tu cuenta no tiene permiso para editar este evento.",
+    };
+    sponsorSay(messages[error?.message] || messages[error?.code] ||
+      `No pudimos guardar el auspiciador (${error?.code || "error desconocido"}).`);
   }
   sponsorSaveButton.disabled = false;
   sponsorSaveButton.textContent = "Guardar auspiciador";
