@@ -424,7 +424,12 @@ const sponsorStatus = document.getElementById("sponsor-status");
 const sponsorSuggestions = document.getElementById("sponsor-suggestions");
 const sponsorSaveButton = document.getElementById("sponsor-save");
 const walletCheckbox = document.getElementById("google-wallet-enabled");
+const appleWalletCheckbox = document.getElementById("apple-wallet-enabled");
+const sponsorLogoInput = document.getElementById("sponsor-logo");
+const sponsorLogoPreview = document.getElementById("sponsor-logo-preview");
 let sponsorPlaces = [];
+let sponsorLogoUrls = {};
+let sponsorLogoPreviewUrl = "";
 let sponsorTimer;
 let sponsorRequest;
 
@@ -434,7 +439,63 @@ function sponsorSay(text, ok) {
 }
 
 function toggleSponsorSection() {
-  sponsorSection.hidden = !walletCheckbox.checked;
+  sponsorSection.hidden = !walletCheckbox.checked && !appleWalletCheckbox.checked;
+}
+
+function sponsorLogoSource() {
+  return sponsorLogoUrls.x3 || sponsorLogoUrls.x2 || sponsorLogoUrls.x1 || "";
+}
+
+function renderSponsorLogo(source = sponsorLogoSource()) {
+  const image = sponsorLogoPreview.querySelector("img");
+  sponsorLogoPreview.hidden = !source;
+  image.src = source || "";
+}
+
+function clearSponsorLogoPreviewUrl() {
+  if (sponsorLogoPreviewUrl) URL.revokeObjectURL(sponsorLogoPreviewUrl);
+  sponsorLogoPreviewUrl = "";
+}
+
+function resizedLogoBlob(bitmap, width, height) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, width, height);
+  const scale = Math.min(width / bitmap.width, height / bitmap.height);
+  const drawWidth = Math.max(1, Math.round(bitmap.width * scale));
+  const drawHeight = Math.max(1, Math.round(bitmap.height * scale));
+  context.drawImage(bitmap, Math.round((width - drawWidth) / 2),
+    Math.round((height - drawHeight) / 2), drawWidth, drawHeight);
+  return new Promise((resolve, reject) => canvas.toBlob(
+    (blob) => blob ? resolve(blob) : reject(new Error("invalid-sponsor-logo")), "image/png"));
+}
+
+async function uploadSponsorLogo() {
+  const file = sponsorLogoInput.files[0];
+  if (!file) return sponsorLogoUrls;
+  if (!file.type.startsWith("image/")) throw new Error("invalid-sponsor-logo");
+  if (file.size > 5 * 1024 * 1024) throw new Error("sponsor-logo-too-large");
+  const bitmap = await createImageBitmap(file);
+  try {
+    const variants = [
+      ["x1", 160, 50], ["x2", 320, 100], ["x3", 480, 150],
+    ];
+    const stamp = Date.now();
+    const uploaded = {};
+    for (const [key, width, height] of variants) {
+      const blob = await resizedLogoBlob(bitmap, width, height);
+      const target = sdk.ref(sdk.storage,
+        `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-${key}-${stamp}.png`);
+      await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
+      uploaded[key] = await sdk.getDownloadURL(target);
+    }
+    sponsorLogoUrls = uploaded;
+    return uploaded;
+  } finally {
+    bitmap.close();
+  }
 }
 
 function hideSponsorSuggestions() {
@@ -542,8 +603,11 @@ function fillSponsor(data) {
     }))
     .filter((place) => Number.isFinite(place.latitude) && Number.isFinite(place.longitude))
     .slice(0, MAX_SPONSOR_PLACES);
+  document.getElementById("sponsor-name").value = String(sponsor.name || "");
   document.getElementById("sponsor-benefits").value = String(sponsor.benefits || "");
-  document.getElementById("sponsor-include-event").checked = sponsor.includeEventLocation === true;
+  document.getElementById("sponsor-redemption-address").value = String(sponsor.redemptionAddress || sponsorPlaces[0]?.name || "");
+  sponsorLogoUrls = sponsor.logoUrls && typeof sponsor.logoUrls === "object" ? { ...sponsor.logoUrls } : {};
+  renderSponsorLogo();
   renderSponsorPlaces();
   sponsorSay(sponsorPlaces.length
     ? `${sponsorPlaces.length} de ${MAX_SPONSOR_PLACES} lugares cargados.`
@@ -562,23 +626,55 @@ sponsorInput.addEventListener("input", (event) => {
 });
 
 walletCheckbox.addEventListener("change", toggleSponsorSection);
+appleWalletCheckbox.addEventListener("change", toggleSponsorSection);
+
+sponsorLogoInput.addEventListener("change", () => {
+  clearSponsorLogoPreviewUrl();
+  const file = sponsorLogoInput.files[0];
+  if (file) sponsorLogoPreviewUrl = URL.createObjectURL(file);
+  renderSponsorLogo(sponsorLogoPreviewUrl || sponsorLogoSource());
+});
+
+document.getElementById("sponsor-logo-remove").addEventListener("click", () => {
+  sponsorLogoInput.value = "";
+  clearSponsorLogoPreviewUrl();
+  sponsorLogoUrls = {};
+  renderSponsorLogo();
+  sponsorSay("Logo quitado. Guarda el auspiciador para confirmar el cambio.");
+});
 
 sponsorSaveButton.addEventListener("click", async () => {
   sponsorSaveButton.disabled = true;
   sponsorSaveButton.textContent = "Guardando…";
   try {
+    const name = document.getElementById("sponsor-name").value.trim();
+    const benefits = document.getElementById("sponsor-benefits").value.trim();
+    const redemptionAddress = document.getElementById("sponsor-redemption-address").value.trim();
+    if (!name || !benefits || !redemptionAddress || !sponsorPlaces.length) {
+      throw new Error("incomplete-sponsor");
+    }
+    const logoUrls = await uploadSponsorLogo();
     await callOrganizerFunction(sdk, "setGoogleWalletEventSponsor", {
       eventId,
-      benefits: document.getElementById("sponsor-benefits").value.trim(),
-      includeEventLocation: document.getElementById("sponsor-include-event").checked,
+      name,
+      benefits,
+      redemptionAddress,
+      logoUrls,
+      includeEventLocation: false,
       locations: sponsorPlaces
     });
-    sponsorSay("Auspiciador guardado. Las tarjetas se actualizan solas.", true);
+    sponsorLogoInput.value = "";
+    clearSponsorLogoPreviewUrl();
+    renderSponsorLogo();
+    sponsorSay("Auspiciador guardado para Apple Wallet y Google Wallet.", true);
     flashSaved(sponsorSaveButton, "Guardar auspiciador");
     return;
   } catch (error) {
     console.error("No fue posible guardar el auspiciador:", error);
-    sponsorSay("No pudimos guardar el auspiciador. Revisa tu conexión e inténtalo nuevamente.");
+    sponsorSay(error?.message === "incomplete-sponsor"
+      ? "Completa nombre, beneficio, dirección visible y al menos un local del auspiciador."
+      : error?.message === "sponsor-logo-too-large" ? "El logo supera el máximo de 5 MB."
+      : "No pudimos guardar el auspiciador. Revisa el logo o tu conexión e inténtalo nuevamente.");
   }
   sponsorSaveButton.disabled = false;
   sponsorSaveButton.textContent = "Guardar auspiciador";

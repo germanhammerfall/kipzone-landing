@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0f0d">
   <title>Editar evento | KipZone</title>
-  <link rel="stylesheet" href="../style.css?v=20260921-canje">
+  <link rel="stylesheet" href="../style.css?v=20260925-beneficio-wallet">
 </head>
 <body class="event-edit-page">
   <header class="event-edit-header"><a href="/organizadores/perfil/">← Mis eventos</a><strong>KipZone</strong><span>Edición segura</span></header>
@@ -32,14 +32,19 @@
       <div class="event-edit-save"><div><strong>Guardar sobre el evento original</strong><span id="save-note">Los participantes y el territorio no se modifican.</span></div><button id="save-submit" class="button primary" type="submit">Guardar cambios</button></div>
     </form>
     <section class="event-edit-form" id="sponsor-section" hidden>
-      <section class="event-edit-section"><div class="event-edit-section-title"><span>5</span><div><h2>Auspiciador</h2><p>Su beneficio viaja dentro de la tarjeta de Google Wallet, y la notificación aparece al pasar cerca de sus locales.</p></div></div><div class="event-edit-fields">
-        <label>Beneficio que verá el corredor<textarea id="sponsor-benefits" rows="3" maxlength="500" placeholder="Ej: 15% de descuento en la mensualidad presentando esta tarjeta."></textarea></label>
+      <section class="event-edit-section"><div class="event-edit-section-title"><span>5</span><div><h2>Auspiciador</h2><p>El beneficio y la marca del auspiciador se mostrarán en Apple Wallet y Google Wallet. La notificación se activará únicamente cerca de sus locales.</p></div></div><div class="event-edit-fields">
+        <label>Nombre del auspiciador<input id="sponsor-name" maxlength="120" placeholder="Ej: MindFit"></label>
+        <label>Beneficio que verá el corredor<textarea id="sponsor-benefits" rows="3" maxlength="500" placeholder="Ej: Día de entrenamiento gratis"></textarea><small class="event-field-help">Este texto será el título principal de la tarjeta.</small></label>
+        <div class="sponsor-logo-field">
+          <label>Logo del auspiciador<input id="sponsor-logo" type="file" accept="image/png,image/jpeg,image/webp"><small class="event-field-help">Usa un logo horizontal, de fondo transparente y buena calidad. Máximo 5 MB.</small></label>
+          <div id="sponsor-logo-preview" class="sponsor-logo-preview" hidden><img alt="Logo del auspiciador"><button id="sponsor-logo-remove" type="button">Quitar logo</button></div>
+        </div>
         <div class="edit-place-search"><label>Agregar local del auspiciador<input id="sponsor-address" maxlength="220" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sponsor-suggestions" placeholder="Escribe la dirección y elige una sugerencia"></label>
         <p id="sponsor-status" class="event-field-help">Puedes agregar hasta 10 locales.</p>
         <div id="sponsor-suggestions" class="edit-place-suggestions" role="listbox" hidden></div></div>
         <ul id="sponsor-list" class="sponsor-list"></ul>
-        <label class="event-visibility"><input id="sponsor-include-event" type="checkbox"><span>Avisar también al pasar cerca del punto de partida</span></label>
-        <p class="event-field-help">Solo llega a quienes tengan Android y hayan activado las notificaciones desde Google Wallet.</p>
+        <label>Dirección visible de canje<input id="sponsor-redemption-address" maxlength="220" placeholder="Ej: Av. Argentina 151, pisos 4 y 5, Valparaíso"><small class="event-field-help">Esta dirección se muestra en la tarjeta. Las coordenadas del local se usan únicamente para la notificación.</small></label>
+        <p class="event-field-help">La dirección del evento no se utiliza. En Android la alerta requiere notificaciones y ubicación habilitadas en Google Wallet.</p>
         <div class="redeem-box">
           <strong>Enlace de canje para el auspiciador</strong>
           <p>Quien atiende en el local abre este enlace y escanea el QR de cada participante. No necesita cuenta.</p>
@@ -70,6 +75,6 @@
       </div></section>
     </section>
   </main>
-  <script type="module" src="edit.js?v=20260921-canje"></script>
+  <script type="module" src="edit.js?v=20260925-beneficio-wallet"></script>
 </body>
 </html>
