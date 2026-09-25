@@ -377,11 +377,30 @@ editForm.addEventListener("submit", async (event) => {
       eventData = updatedSnapshot.data();
       fillForm(eventData);
     }
-    message.textContent = "Cambios guardados correctamente en Firebase.";
+    let sponsorResult = null;
+    if (payload.googleWalletEnabled || payload.appleWalletEnabled) {
+      try {
+        sponsorResult = await saveSponsorConfiguration();
+      } catch (sponsorError) {
+        console.error("El evento se guardó, pero no el auspiciador:", sponsorError);
+        message.textContent = `El evento se guardó, pero el auspiciador no: ${sponsorErrorMessage(sponsorError)}`;
+        message.classList.remove("success");
+        message.hidden = false;
+        message.scrollIntoView({ behavior: "smooth", block: "center" });
+        saveButton.disabled = false;
+        saveButton.textContent = "Guardar todos los cambios";
+        return;
+      }
+    }
+    message.textContent = sponsorResult
+      ? sponsorResult.logoWarning
+        ? "Evento y auspiciador guardados. El logo no pudo subirse; prueba con otro PNG o JPG."
+        : "Evento y auspiciador guardados correctamente en Firebase."
+      : "Cambios guardados correctamente en Firebase.";
     message.classList.add("success");
     message.hidden = false;
     message.scrollIntoView({ behavior: "smooth", block: "center" });
-    flashSaved(saveButton, "Guardar cambios");
+    flashSaved(saveButton, "Guardar todos los cambios");
     return;
   } catch (error) {
     console.error("No fue posible guardar el evento:", error);
@@ -390,7 +409,7 @@ editForm.addEventListener("submit", async (event) => {
     message.hidden = false;
   }
   saveButton.disabled = false;
-  saveButton.textContent = "Guardar cambios";
+  saveButton.textContent = "Guardar todos los cambios";
 });
 
 async function start() {
@@ -413,9 +432,9 @@ start();
 /* ---------------------------------------------------------------------------
    Auspiciador de la tarjeta de Google Wallet.
 
-   Va aparte del formulario principal, con su propio boton de guardado, para no
-   tocar el camino de edicion del evento que ya funciona. Reusa el mismo proxy
-   de direcciones que el buscador de arriba, asi que no agrega dependencias.
+   El boton propio permite guardar solo esta seccion, pero el boton principal
+   tambien llama a la misma funcion para que nunca queden cambios a medias.
+   Reusa el mismo proxy de direcciones que el buscador de arriba.
 --------------------------------------------------------------------------- */
 const MAX_SPONSOR_PLACES = 10;
 const sponsorSection = document.getElementById("sponsor-section");
@@ -643,10 +662,20 @@ document.getElementById("sponsor-logo-remove").addEventListener("click", () => {
   sponsorSay("Logo quitado. Guarda el auspiciador para confirmar el cambio.");
 });
 
-sponsorSaveButton.addEventListener("click", async () => {
-  sponsorSaveButton.disabled = true;
-  sponsorSaveButton.textContent = "Guardando…";
-  try {
+function sponsorErrorMessage(error) {
+  const messages = {
+    "missing-sponsor-name": "falta el nombre del auspiciador.",
+    "missing-sponsor-benefit": "falta el beneficio que verá el corredor.",
+    "missing-redemption-address": "falta la dirección visible de canje.",
+    "missing-sponsor-place": "agrega el local desde una sugerencia para guardar sus coordenadas.",
+    "functions/unauthenticated": "tu sesión venció. Vuelve a iniciar sesión.",
+    "functions/permission-denied": "tu cuenta no tiene permiso para editar este evento.",
+  };
+  return messages[error?.message] || messages[error?.code] ||
+    `no pudimos guardar (${error?.code || "error desconocido"}).`;
+}
+
+async function saveSponsorConfiguration() {
     const nameInput = document.getElementById("sponsor-name");
     const benefitsInput = document.getElementById("sponsor-benefits");
     const redemptionInput = document.getElementById("sponsor-redemption-address");
@@ -683,8 +712,7 @@ sponsorSaveButton.addEventListener("click", async () => {
       } catch (logoError) {
         console.error("Los datos se guardaron, pero no fue posible subir el logo:", logoError);
         sponsorSay("Nombre, beneficio y dirección guardados. El logo no se pudo subir; prueba con un PNG o JPG menor a 5 MB.", true);
-        flashSaved(sponsorSaveButton, "Guardar auspiciador", "Datos guardados ✓");
-        return;
+        return { saved: true, logoWarning: true };
       }
     }
 
@@ -695,20 +723,20 @@ sponsorSaveButton.addEventListener("click", async () => {
     clearSponsorLogoPreviewUrl();
     renderSponsorLogo();
     sponsorSay("Auspiciador guardado para Apple Wallet y Google Wallet.", true);
-    flashSaved(sponsorSaveButton, "Guardar auspiciador");
+    return { saved: true, logoWarning: false };
+}
+
+sponsorSaveButton.addEventListener("click", async () => {
+  sponsorSaveButton.disabled = true;
+  sponsorSaveButton.textContent = "Guardando…";
+  try {
+    const result = await saveSponsorConfiguration();
+    flashSaved(sponsorSaveButton, "Guardar auspiciador",
+      result.logoWarning ? "Datos guardados ✓" : "Guardado ✓");
     return;
   } catch (error) {
     console.error("No fue posible guardar el auspiciador:", error);
-    const messages = {
-      "missing-sponsor-name": "Falta el nombre del auspiciador.",
-      "missing-sponsor-benefit": "Falta el beneficio que verá el corredor.",
-      "missing-redemption-address": "Falta la dirección visible de canje.",
-      "missing-sponsor-place": "Agrega el local desde una sugerencia para guardar sus coordenadas.",
-      "functions/unauthenticated": "Tu sesión venció. Vuelve a iniciar sesión.",
-      "functions/permission-denied": "Tu cuenta no tiene permiso para editar este evento.",
-    };
-    sponsorSay(messages[error?.message] || messages[error?.code] ||
-      `No pudimos guardar el auspiciador (${error?.code || "error desconocido"}).`);
+    sponsorSay(sponsorErrorMessage(error));
   }
   sponsorSaveButton.disabled = false;
   sponsorSaveButton.textContent = "Guardar auspiciador";
