@@ -264,14 +264,19 @@ function renderEvent(doc){
     address:val(f.address)||'',start:start,
     participants:Math.max(0,Number(val(f.participantsCount))||0),
     webRegistrations:Math.max(0,Number(val(f.webRegistrationsCount))||0),
+    ticketingEnabled:val(f.ticketingEnabled)===true,
+    ticketCapacity:Math.max(0,Number(val(f.ticketCapacity))||0),
+    ticketsIssued:Math.max(0,Number(val(f.ticketsIssuedCount))||0),
     distance:val(f.distanciaEstimada)||0,enabled:val(f.webRegistrationEnabled)!==false,
     requireRut:val(f.webRegistrationRequireRut)===true,
     checkIn:val(f.webRegistrationCheckInEnabled)===true,
     walletEnabled:val(f.googleWalletEnabled)===true,
     appleWalletEnabled:val(f.appleWalletEnabled)===true,
-    closed:val(f.webRegistrationClosed)===true
+    closed:val(f.webRegistrationClosed)===true||val(f.registrationClosed)===true
   };
   const e=eventData;
+  e.ticketsIssued=Math.max(e.ticketsIssued,e.participants+e.webRegistrations);
+  e.soldOut=e.ticketingEnabled&&e.ticketCapacity>0&&e.ticketsIssued>=e.ticketCapacity;
   if(!(e.start instanceof Date)||isNaN(e.start)){
     renderError('Este evento todavía no tiene una fecha válida.');return;
   }
@@ -282,17 +287,17 @@ function renderEvent(doc){
     '<div class="meta">🗓️ <div><b>'+esc(fecha(e.start))+'</b></div></div>'+
     (e.address?'<div class="meta">📍 <div>'+esc(e.address)+'</div></div>':'')+
     '<div class="stats"><div class="stat"><div class="n">'+(e.participants+e.webRegistrations)+'</div>'+
-    '<div class="l">INSCRITOS</div><div class="detail">'+e.participants+' app + '+e.webRegistrations+' QR</div></div>'+
+    '<div class="l">INSCRITOS</div><div class="detail">'+e.participants+' app + '+e.webRegistrations+' QR'+(e.ticketingEnabled&&e.ticketCapacity>0?' · cupo '+e.ticketCapacity:'')+'</div></div>'+
     (e.distance>0?'<div class="stat"><div class="n">'+new Intl.NumberFormat('es-CL',{maximumFractionDigits:1}).format(e.distance)+' km</div><div class="l">DISTANCIA</div></div>':'')+
     '</div>'+
-    ((!e.enabled||e.closed)?
-      '<div class="card"><h2>Inscripciones cerradas</h2><p>El organizador cerró la inscripción web para esta fecha.</p></div>':
+    ((!e.enabled||e.closed||e.soldOut)?
+      '<div class="card"><h2>'+(e.soldOut?'Entradas agotadas':'Inscripciones cerradas')+'</h2><p>'+(e.soldOut?'Ya se ocuparon los '+e.ticketCapacity+' cupos disponibles.':'El organizador cerró la inscripción web para esta fecha.')+'</p></div>':
       registrationForm(e))+
     '<a class="cta ghost" href="'+PLAY+'" target="_blank" rel="noopener noreferrer">Descargar KipZone en Google Play</a>'+
     '<div class="hint">La app te permite registrar tu recorrido y conquistar territorio para este evento.</div>'+
     '<a class="cta ghost" href="'+esc(location.href)+'">Ya tengo KipZone</a>';
   document.title=e.title+' · KipZone';
-  if(e.enabled&&!e.closed) document.getElementById('registration-form').addEventListener('submit',submitRegistration);
+  if(e.enabled&&!e.closed&&!e.soldOut) document.getElementById('registration-form').addEventListener('submit',submitRegistration);
 }
 function registrationForm(e){
   return '<section class="card"><h2>Inscríbete a esta corrida</h2>'+
@@ -398,21 +403,19 @@ async function submitRegistration(ev){
     }catch(_){}
     if(!token){
       token=randomToken();
-      await firebaseClient.firestoreSdk.setDoc(registrationRef,{
-        fullName:fullName,phone:phone,rut:rut,
-        source:'event_qr_web',status:'registered',
-        authUid:auth.uid,
-        occurrenceStart:firebaseClient.firestoreSdk.Timestamp.fromDate(eventData.start),
-        registeredAt:firebaseClient.firestoreSdk.serverTimestamp(),
-        privacyConsent:true,privacyVersion:'2026-08',personalQrToken:token,
-        checkInEnabled:!!eventData.checkIn
-      });
+      const register=firebaseClient.functionsSdk.httpsCallable(firebaseClient.functions,'registerWebEventParticipant');
+      const response=await register({eventId:eventId,fullName:fullName,rut:rut,personalQrToken:token});
+      if(response.data?.ok!==true)throw new Error('REGISTRATION_FAILED');
+      token=String(response.data.personalQrToken||token);
+      displayName=String(response.data.fullName||fullName);
+      if(String(response.data.registrationId||'')!==id)throw new Error('REGISTRATION_ID_MISMATCH');
     }
     try{localStorage.setItem(storageKey(auth.uid,eventData.start),JSON.stringify({id:id,token:token}));}catch(_){}
     renderSuccess(id,token,displayName);
   }catch(err){
     console.error('No fue posible confirmar la inscripción por SMS:',err);
-    if(err.status===409)errorBox.textContent='Tu inscripción para esta fecha ya fue registrada.';
+    if(err.code==='functions/resource-exhausted')errorBox.textContent='Entradas agotadas. Ya se ocuparon todos los cupos disponibles.';
+    else if(err.status===409)errorBox.textContent='Tu inscripción para esta fecha ya fue registrada.';
     else if(err.status===403)errorBox.textContent='La inscripción todavía no está habilitada para este evento.';
     else errorBox.textContent=phoneError(err)||'No pudimos completar la inscripción. Revisa el código e inténtalo nuevamente.';
     button.disabled=false;button.textContent='Confirmar mi inscripción';

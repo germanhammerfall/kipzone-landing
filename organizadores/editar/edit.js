@@ -69,6 +69,21 @@ function fillForm(data) {
   document.getElementById("status").textContent = data.status === "Inactivo" ? "Inactivo" : "Activo";
   document.getElementById("google-wallet-enabled").checked = data.googleWalletEnabled === true;
   document.getElementById("apple-wallet-enabled").checked = data.appleWalletEnabled === true;
+  const capacityInput = document.getElementById("ticket-capacity");
+  const paidTicketing = data.ticketingEnabled === true && data.ticketPlan !== "free_only";
+  const issued = Math.max(
+    0,
+    Number(data.ticketsIssuedCount) || 0,
+    (Math.max(0, Number(data.participantsCount) || 0) + Math.max(0, Number(data.webRegistrationsCount) || 0)),
+  );
+  capacityInput.value = data.ticketingEnabled === true ? Math.max(0, Number(data.ticketCapacity) || 0) || "" : "";
+  capacityInput.disabled = paidTicketing;
+  capacityInput.min = String(Math.max(1, issued));
+  document.getElementById("capacity-hint").textContent = paidTicketing
+    ? "Este evento usa entradas pagadas; conserva su cupo actual."
+    : issued > 0
+      ? `Ya hay ${issued} inscripciones. El límite no puede ser menor que ese total.`
+      : "Cuenta en conjunto las inscripciones de la app y de esta página. Déjalo vacío si no quieres límite.";
   const discoverable = document.getElementById("discoverable");
   discoverable.checked = data.discoverable !== false;
   discoverable.disabled = recurring;
@@ -313,9 +328,30 @@ editForm.addEventListener("submit", async (event) => {
     message.hidden = false;
     return;
   }
-  const ticketingEnabled = eventData.ticketingEnabled === true;
+  const paidTicketing = eventData.ticketingEnabled === true && eventData.ticketPlan !== "free_only";
+  const requestedCapacity = Math.max(0, Math.trunc(Number(document.getElementById("ticket-capacity").value) || 0));
+  const alreadyIssued = Math.max(
+    0,
+    Number(eventData.ticketsIssuedCount) || 0,
+    (Math.max(0, Number(eventData.participantsCount) || 0) + Math.max(0, Number(eventData.webRegistrationsCount) || 0)),
+  );
+  if (!paidTicketing && requestedCapacity > 0 && requestedCapacity < alreadyIssued) {
+    message.textContent = `El cupo no puede ser menor que las ${alreadyIssued} inscripciones actuales.`;
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  if (!paidTicketing && eventData.ticketingEnabled === true && alreadyIssued > 0 && requestedCapacity === 0) {
+    message.textContent = "No puedes quitar el límite después de emitir entradas. Puedes aumentarlo.";
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
+  const ticketingEnabled = paidTicketing || requestedCapacity > 0;
+  const ticketPlan = paidTicketing ? String(eventData.ticketPlan) : "free_only";
+  const ticketCapacity = paidTicketing ? Math.max(1, Number(eventData.ticketCapacity) || 1) : requestedCapacity;
   const paidRegistration = eventData.isPaidRegistration === true || eventData.paidRegistrationEnabled === true ||
-    (ticketingEnabled && eventData.ticketPlan !== "free_only");
+    paidTicketing;
   if (paymentLink && !paidRegistration) {
     message.textContent = "La función actual solo permite links en eventos con inscripción pagada ya configurada.";
     message.classList.remove("success");
@@ -344,9 +380,9 @@ editForm.addEventListener("submit", async (event) => {
       googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
       appleWalletEnabled: document.getElementById("apple-wallet-enabled").checked,
       ticketingEnabled,
-      ticketPlan: String(eventData.ticketPlan || "free_only"),
-      ticketCapacity: Math.max(0, Number(eventData.ticketCapacity) || 0),
-      freeTicketLimit: Math.max(0, Number(eventData.freeTicketLimit) || 0),
+      ticketPlan,
+      ticketCapacity,
+      freeTicketLimit: ticketPlan === "free_only" ? ticketCapacity : Math.max(0, Number(eventData.freeTicketLimit) || 0),
       webRegistrationEnabled: true,
       webRegistrationClosed: false,
       isPaidRegistration: paidRegistration,
