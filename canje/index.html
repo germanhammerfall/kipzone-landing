@@ -21,6 +21,9 @@
   .tally div{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
   .tally b{display:block;color:var(--ok);font-size:2rem;line-height:1}
   .tally small{color:var(--soft);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+  .expiry{margin:-6px 0 18px;padding:12px 15px;border:1px solid var(--line);border-radius:14px;
+    background:var(--card);color:var(--soft);font-size:.84rem;text-align:center}
+  .expiry strong{color:var(--text)}
   #scanner{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;
     background:#000;aspect-ratio:1/1}
   #scanner video{width:100%;height:100%;object-fit:cover}
@@ -63,6 +66,7 @@
       <div><b id="tally-today">0</b><small>Hoy</small></div>
       <div><b id="tally-total">0</b><small>En total</small></div>
     </div>
+    <p id="expiry" class="expiry" hidden></p>
 
     <div id="result" hidden></div>
 
@@ -121,10 +125,30 @@ function stamp(value) {
 async function loadSummary() {
   try {
     const response = await callSummary({ eventId, code });
-    document.getElementById("tally-today").textContent = String(response.data?.today ?? 0);
-    document.getElementById("tally-total").textContent = String(response.data?.total ?? 0);
+    const data = response.data || {};
+    document.getElementById("tally-today").textContent = String(data.today ?? 0);
+    document.getElementById("tally-total").textContent = String(data.total ?? 0);
+    const expiry = document.getElementById("expiry");
+    if (data.expiresAt) {
+      expiry.hidden = false;
+      expiry.replaceChildren("Beneficio válido hasta ");
+      const date = document.createElement("strong");
+      date.textContent = stamp(data.expiresAt);
+      expiry.append(date);
+    } else {
+      expiry.hidden = true;
+    }
+    if (data.expired) {
+      stopCamera();
+      document.querySelectorAll("#manual-form input, #manual-form button")
+        .forEach((element) => { element.disabled = true; });
+      show("bad", "Beneficio vencido", "La fecha límite de canje ya terminó.");
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error("No fue posible cargar el conteo:", error);
+    return true;
   }
 }
 
@@ -138,6 +162,11 @@ async function redeem(scan) {
     } else if (data.result === "already") {
       show("already", "Ya fue canjeado", data.fullName +
         (data.redeemedAt ? " · " + stamp(data.redeemedAt) : ""));
+    } else if (data.result === "expired") {
+      stopCamera();
+      show("bad", "Beneficio vencido", data.expiresAt
+        ? "La fecha límite fue " + stamp(data.expiresAt) + "."
+        : "La fecha límite de canje ya terminó.");
     } else {
       show("bad", "No válido", data.message || "Ese código no corresponde a este evento.");
     }
@@ -228,8 +257,8 @@ async function start() {
   callRedeem = functionsSdk.httpsCallable(functions, "redeemEventBenefit");
   callSummary = functionsSdk.httpsCallable(functions, "eventBenefitSummary");
   panel.hidden = false;
-  await loadSummary();
-  void startCamera();
+  const available = await loadSummary();
+  if (available) void startCamera();
 }
 
 void start();

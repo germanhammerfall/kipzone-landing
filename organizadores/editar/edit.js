@@ -2,6 +2,8 @@ import { asDate, authMessage, callOrganizerFunction, combineDateAndTime, dateInp
 
 const PLACES_PROXY = "https://gmaps-proxy-semevis3fa-uc.a.run.app";
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";
+const DEFAULT_REDEMPTION_EXPIRY = eventId === "f5620e3b04bf3abf56fc337ac4be6d74"
+  ? "2026-11-11" : "";
 const loading = document.getElementById("edit-loading");
 const loginGate = document.getElementById("login-gate");
 const eventGate = document.getElementById("event-gate");
@@ -661,6 +663,8 @@ function fillSponsor(data) {
   document.getElementById("sponsor-name").value = String(sponsor.name || "");
   document.getElementById("sponsor-benefits").value = String(sponsor.benefits || "");
   document.getElementById("sponsor-redemption-address").value = String(sponsor.redemptionAddress || sponsorPlaces[0]?.name || "");
+  document.getElementById("sponsor-redemption-expiry").value =
+    dateInputValue(asDate(sponsor.redemptionExpiresAt)) || DEFAULT_REDEMPTION_EXPIRY;
   sponsorLogoUrls = sponsor.logoUrls && typeof sponsor.logoUrls === "object" ? { ...sponsor.logoUrls } : {};
   renderSponsorLogo();
   renderSponsorPlaces();
@@ -703,6 +707,7 @@ function sponsorErrorMessage(error) {
     "missing-sponsor-name": "falta el nombre del auspiciador.",
     "missing-sponsor-benefit": "falta el beneficio que verá el corredor.",
     "missing-redemption-address": "falta la dirección visible de canje.",
+    "missing-redemption-expiry": "falta la fecha límite del beneficio.",
     "missing-sponsor-place": "agrega el local desde una sugerencia para guardar sus coordenadas.",
     "functions/unauthenticated": "tu sesión venció. Vuelve a iniciar sesión.",
     "functions/permission-denied": "tu cuenta no tiene permiso para editar este evento.",
@@ -715,12 +720,15 @@ async function saveSponsorConfiguration() {
     const nameInput = document.getElementById("sponsor-name");
     const benefitsInput = document.getElementById("sponsor-benefits");
     const redemptionInput = document.getElementById("sponsor-redemption-address");
+    const expiryInput = document.getElementById("sponsor-redemption-expiry");
     const name = nameInput.value.trim();
     const benefits = benefitsInput.value.trim();
     const redemptionAddress = redemptionInput.value.trim();
+    const redemptionExpiresOn = expiryInput.value.trim();
     if (!name) { nameInput.focus(); throw new Error("missing-sponsor-name"); }
     if (!benefits) { benefitsInput.focus(); throw new Error("missing-sponsor-benefit"); }
     if (!redemptionAddress) { redemptionInput.focus(); throw new Error("missing-redemption-address"); }
+    if (!redemptionExpiresOn) { expiryInput.focus(); throw new Error("missing-redemption-expiry"); }
     if (!sponsorPlaces.length) { sponsorInput.focus(); throw new Error("missing-sponsor-place"); }
 
     const payload = {
@@ -728,6 +736,7 @@ async function saveSponsorConfiguration() {
       name,
       benefits,
       redemptionAddress,
+      redemptionExpiresOn,
       logoUrls: sponsorLogoUrls,
       includeEventLocation: false,
       locations: sponsorPlaces
@@ -753,6 +762,7 @@ async function saveSponsorConfiguration() {
     }
 
     eventData.walletSponsor = { name, benefits, redemptionAddress,
+      redemptionExpiresAt: new Date(redemptionExpiresOn + "T23:59:59"),
       logoUrls: sponsorLogoUrls, locations: sponsorPlaces.map((place) => ({ ...place })),
       includeEventLocation: false };
     sponsorLogoInput.value = "";
