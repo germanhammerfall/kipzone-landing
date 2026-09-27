@@ -86,6 +86,7 @@
   </div>
 </main>
 
+<script src="./jsQR.js"></script>
 <script type="module">
 const API_KEY = "AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE";
 const PROJECT = "red-social-1cn89d";
@@ -102,6 +103,8 @@ const manual = document.getElementById("manual");
 const cameraToggle = document.getElementById("camera-toggle");
 let callRedeem, callSummary;
 let detector = null;
+let fallbackCanvas = null;
+let fallbackContext = null;
 let scanning = false;
 let lastScan = "";
 let lastScanAt = 0;
@@ -180,13 +183,22 @@ async function redeem(scan) {
 }
 
 async function startCamera() {
-  if (!("BarcodeDetector" in window)) {
+  const hasNativeDetector = "BarcodeDetector" in window;
+  const hasFallbackDetector = typeof window.jsQR === "function";
+  if (!navigator.mediaDevices?.getUserMedia || (!hasNativeDetector && !hasFallbackDetector)) {
     show("bad", "Cámara no disponible",
       "Este navegador no puede leer QR. Escribe el número de boleto.");
     return;
   }
   try {
-    detector = detector || new window.BarcodeDetector({ formats: ["qr_code"] });
+    if (hasNativeDetector) {
+      detector = detector || new window.BarcodeDetector({ formats: ["qr_code"] });
+    } else {
+      fallbackCanvas = fallbackCanvas || document.createElement("canvas");
+      fallbackContext = fallbackContext || fallbackCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
+    }
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: "environment" } }, audio: false,
     });
@@ -203,6 +215,32 @@ async function startCamera() {
   }
 }
 
+function fallbackQrValue() {
+  if (!fallbackContext || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+      !video.videoWidth || !video.videoHeight) return "";
+
+  // Limitar el fotograma mantiene el lector fluido en iPhone sin reducir la
+  // nitidez necesaria para leer el QR mostrado en una tarjeta.
+  const scale = Math.min(1, 720 / video.videoWidth);
+  const width = Math.max(1, Math.round(video.videoWidth * scale));
+  const height = Math.max(1, Math.round(video.videoHeight * scale));
+  if (fallbackCanvas.width !== width || fallbackCanvas.height !== height) {
+    fallbackCanvas.width = width;
+    fallbackCanvas.height = height;
+  }
+  fallbackContext.drawImage(video, 0, 0, width, height);
+  const frame = fallbackContext.getImageData(0, 0, width, height);
+  return window.jsQR(frame.data, width, height, { inversionAttempts: "attemptBoth" })?.data || "";
+}
+
+async function detectedQrValue() {
+  if (detector) {
+    const codes = await detector.detect(video);
+    return codes[0]?.rawValue || "";
+  }
+  return fallbackQrValue();
+}
+
 function stopCamera() {
   scanning = false;
   const stream = video.srcObject;
@@ -215,8 +253,7 @@ function stopCamera() {
 async function loop() {
   while (scanning) {
     try {
-      const codes = await detector.detect(video);
-      const value = codes[0]?.rawValue || "";
+      const value = await detectedQrValue();
       // Sin esta pausa, dejar el QR frente a la camara dispararia el canje
       // decenas de veces por segundo.
       if (value && (value !== lastScan || Date.now() - lastScanAt > 4000)) {
