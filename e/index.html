@@ -23,8 +23,12 @@
     margin:2px 0 20px}.brand span{color:var(--accent)}
   .pill{display:inline-block;background:var(--accent);color:#06120C;font-size:10px;
     font-weight:900;letter-spacing:1.5px;padding:6px 11px;border-radius:30px;margin-bottom:14px}
-  .hero{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:18px;
-    background:var(--surface);display:block;margin-bottom:18px}
+  .hero-frame{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;
+    border-radius:18px;background:var(--surface);margin-bottom:18px}
+  .hero{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+  .hero-title{position:absolute;inset:auto 0 0;padding:18px;background:rgba(0,0,0,.68);
+    backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+  .hero-title h1{margin:0}
   h1{font-size:30px;line-height:1.04;font-weight:900;letter-spacing:-.7px;
     margin-bottom:13px;word-wrap:break-word}
   h2{font-size:21px;line-height:1.15;margin-bottom:8px}
@@ -97,8 +101,10 @@
     letter-spacing:1.7px;padding:8px 12px;border:1px solid rgba(212,230,0,.24);border-radius:999px;
     background:rgba(212,230,0,.065);margin-bottom:15px}
   .pill::before{content:"";width:6px;height:6px;background:var(--accent);border-radius:50%;box-shadow:0 0 12px rgba(212,230,0,.8)}
-  .hero{aspect-ratio:16/8.5;border-radius:23px;margin-bottom:26px;border:1px solid rgba(255,255,255,.1);
+  .hero-frame{aspect-ratio:16/8.5;border-radius:23px;margin-bottom:26px;border:1px solid rgba(255,255,255,.1);
     box-shadow:0 24px 70px rgba(0,0,0,.34)}
+  .hero-title{padding:clamp(18px,4vw,27px) clamp(19px,4vw,30px);border-top:1px solid rgba(255,255,255,.12)}
+  .hero-title h1{font-size:clamp(28px,6vw,46px);line-height:1.02;letter-spacing:-1.5px}
   h1{font-size:clamp(34px,7vw,54px);line-height:1.02;font-weight:760;letter-spacing:-1.8px;
     margin-bottom:19px;text-wrap:pretty}
   h2{font-size:23px;line-height:1.15;letter-spacing:-.55px;margin-bottom:9px}
@@ -151,7 +157,8 @@
   .wallet-cta:hover{background:#1a1a1a;box-shadow:none}.wallet-note{margin-top:11px;font-size:12px;line-height:1.5}
   .apple-wallet-link{margin:3px 0}.apple-wallet-link img{width:170px}
   @media(max-width:560px){.wrap{padding:18px 16px 44px}.brand{height:48px;margin-bottom:22px}
-    .brand img{width:136px;height:48px}.hero{aspect-ratio:4/3;border-radius:19px;margin-bottom:22px}
+    .brand img{width:136px;height:48px}.hero-frame{aspect-ratio:4/3;border-radius:19px;margin-bottom:22px}
+    .hero-title{padding:17px 18px}.hero-title h1{font-size:clamp(27px,8vw,38px);letter-spacing:-1px}
     h1{font-size:clamp(32px,9vw,43px);letter-spacing:-1.2px}.card{border-radius:21px}
     .event-details .meta{padding:13px;border-radius:14px}}
   @media(max-width:360px){.wrap{padding-inline:13px}h1{font-size:30px}.card{padding:18px}.personal-qr{padding:12px}}
@@ -361,8 +368,7 @@ function renderEvent(doc){
   }
   app.innerHTML=
     '<div class="pill">SOCIAL RUN</div>'+
-    (e.image?'<img class="hero" src="'+esc(e.image)+'" alt="Imagen de '+esc(e.title)+'">':'')+
-    '<h1>'+esc(e.title)+'</h1>'+
+    (e.image?'<div class="hero-frame"><img class="hero" src="'+esc(e.image)+'" alt="Imagen de '+esc(e.title)+'"><div class="hero-title"><h1>'+esc(e.title)+'</h1></div></div>':'<h1>'+esc(e.title)+'</h1>')+
     '<div class="event-details"><div class="meta"><span class="meta-icon" aria-hidden="true">◷</span><div><b>'+esc(fecha(e.start))+'</b></div></div>'+
     (e.address?'<div class="meta"><span class="meta-icon" aria-hidden="true">⌖</span><div>'+esc(e.address)+'</div></div>':'')+'</div>'+
     ((!e.enabled||e.closed||e.soldOut)?
