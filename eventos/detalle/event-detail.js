@@ -1,4 +1,4 @@
-import { formatEventDate, loadPublicEvents, safeHttpUrl } from "../../organizadores/firebase-client.js";
+import { firebaseConfig, formatEventDate, loadPublicEvents, safeHttpUrl } from "../../organizadores/firebase-client.js";
 
 const root = document.getElementById("event-detail");
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";
@@ -85,6 +85,51 @@ function eventPhotos(event) {
   return section;
 }
 
+// Read only the opened event's already-public presentation fields. Firestore
+// rules still decide access; no authentication, private documents or feed changes.
+async function loadDisplayFields(id) {
+  const url = new URL(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/run_events/${encodeURIComponent(id)}`);
+  ["distanciaEstimada", "imagenAmigos", "discoverable", "status"].forEach((field) => {
+    url.searchParams.append("mask.fieldPaths", field);
+  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url, { credentials: "omit", signal: controller.signal });
+    if (!response.ok) return null;
+    const { fields = {} } = await response.json();
+    if (fields.discoverable?.booleanValue !== true || fields.status?.stringValue !== "Activo") return null;
+    return {
+      distanciaEstimada: fields.distanciaEstimada?.doubleValue ?? fields.distanciaEstimada?.integerValue ?? null,
+      imagenAmigos: (fields.imagenAmigos?.arrayValue?.values || [])
+        .map((value) => value.stringValue).filter((value) => typeof value === "string"),
+    };
+  } catch (_) {
+    // Optional content must never prevent the event or registration from loading.
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function renderDisplayFields(event, targets) {
+  targets.distance?.remove();
+  targets.photos?.remove();
+  const distance = distanceLabel(event.distanciaEstimada);
+  if (distance) {
+    const badge = node("span", "public-event-distance");
+    badge.setAttribute("aria-label", `Distancia estimada: ${distance}`);
+    badge.append(icon("route"), node("span", "", distance));
+    targets.meta.append(badge);
+    targets.distance = badge;
+  }
+  const photos = eventPhotos(event);
+  if (photos) {
+    targets.content.append(photos);
+    targets.photos = photos;
+  }
+}
+
 function registrationBlock(event) {
   const box = node("div", `public-event-registration${event.soldOut ? " sold-out" : ""}`);
   box.append(node("p", "eyebrow", "Inscripción"));
@@ -124,13 +169,6 @@ function render(event) {
   const heroCopy = node("div", "public-event-hero-copy");
   const meta = node("div", "public-event-hero-meta");
   meta.append(node("p", "eyebrow", "Evento deportivo"));
-  const distance = distanceLabel(event.distanciaEstimada);
-  if (distance) {
-    const badge = node("span", "public-event-distance");
-    badge.setAttribute("aria-label", `Distancia estimada: ${distance}`);
-    badge.append(icon("route"), node("span", "", distance));
-    meta.append(badge);
-  }
   const date = node("p", "public-event-date");
   date.append(icon("calendar"), node("span", "", formatEventDate(event.nextStart)));
   heroCopy.append(meta, node("h1", "", event.title), date);
@@ -153,8 +191,6 @@ function render(event) {
   map.rel = "noreferrer";
   place.append(map);
   content.append(about, place);
-  const photos = eventPhotos(event);
-  if (photos) content.append(photos);
 
   const sidebar = node("aside", "public-event-sidebar");
   sidebar.setAttribute("aria-label", "Información e inscripción");
@@ -169,6 +205,9 @@ function render(event) {
 
   layout.append(content, sidebar);
   root.append(hero, layout);
+  const targets = { meta, content };
+  renderDisplayFields(event, targets);
+  return targets;
 }
 
 async function load() {
@@ -183,7 +222,9 @@ async function load() {
       state("Evento no disponible", "Puede que ya haya terminado, esté oculto o el enlace sea incorrecto.");
       return;
     }
-    render(event);
+    const targets = render(event);
+    const fields = await loadDisplayFields(event.id);
+    if (fields) renderDisplayFields({ ...event, ...fields }, targets);
   } catch (error) {
     console.error("No fue posible cargar el detalle del evento:", error);
     state("No pudimos cargar el evento", "Inténtalo nuevamente en unos segundos.");
