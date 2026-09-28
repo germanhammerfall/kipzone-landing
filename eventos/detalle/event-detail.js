@@ -186,7 +186,11 @@ function render(event) {
   const place = node("section");
   place.append(node("h2", "", "Punto de encuentro"), node("p", "public-event-address", event.address));
   const map = node("a", "public-event-map", "Abrir ubicación en el mapa →");
-  map.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`;
+  // The organizer's exact meeting point differs from the geocoded street
+  // address for this event. Preserve the explicitly supplied Maps pin.
+  map.href = event.id === "cb505a083801ef6dbf8e89a3a98a6298"
+    ? "https://maps.app.goo.gl/XBwmSj9M4aAYWpvK7"
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)}`;
   map.target = "_blank";
   map.rel = "noreferrer";
   place.append(map);
