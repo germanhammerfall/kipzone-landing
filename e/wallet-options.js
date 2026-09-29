@@ -2,7 +2,10 @@
   "use strict";
 
   function walletOptions({ userAgent = "", platform = "",
-    googleEnabled = false, appleEnabled = false } = {}) {
+    googleEnabled = false, appleEnabled = false, walletCouponsAvailable = true } = {}) {
+    if (walletCouponsAvailable !== true) {
+      return { apple: false, google: false, autoGoogle: false };
+    }
     if (/iPhone/i.test(userAgent) || /^iPhone$/i.test(platform)) {
       return { apple: appleEnabled === true, google: false, autoGoogle: false };
     }
