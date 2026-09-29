@@ -507,6 +507,7 @@ const sponsorLogoPreview = document.getElementById("sponsor-logo-preview");
 let sponsorPlaces = [];
 let sponsorLogoUrls = {};
 let sponsorGoogleLogoUrls = {};
+let sponsorGoogleWideLogoUrls = {};
 let sponsorLogoPreviewUrl = "";
 let sponsorTimer;
 let sponsorRequest;
@@ -551,9 +552,48 @@ function resizedLogoBlob(bitmap, width, height) {
     (blob) => blob ? resolve(blob) : reject(new Error("invalid-sponsor-logo")), "image/png"));
 }
 
+function wideSponsorLogoBlob(bitmap, sponsorName, width, height) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, width, height);
+  const padding = Math.max(4, Math.round(height * 0.08));
+  const iconSize = height - padding * 2;
+  const scale = Math.min(iconSize / bitmap.width, iconSize / bitmap.height);
+  const drawWidth = Math.max(1, Math.round(bitmap.width * scale));
+  const drawHeight = Math.max(1, Math.round(bitmap.height * scale));
+  context.drawImage(bitmap, padding + Math.round((iconSize - drawWidth) / 2),
+    padding + Math.round((iconSize - drawHeight) / 2), drawWidth, drawHeight);
+
+  const label = String(sponsorName || "").trim();
+  if (label) {
+    const textX = padding * 2 + iconSize;
+    const availableWidth = width - textX - padding;
+    let fontSize = Math.round(height * 0.46);
+    const minFontSize = Math.round(height * 0.25);
+    context.font = `700 ${fontSize}px Arial, sans-serif`;
+    while (fontSize > minFontSize && context.measureText(label).width > availableWidth) {
+      fontSize -= 1;
+      context.font = `700 ${fontSize}px Arial, sans-serif`;
+    }
+    context.fillStyle = "#FFFFFF";
+    context.textBaseline = "middle";
+    context.save();
+    context.beginPath();
+    context.rect(textX, 0, availableWidth, height);
+    context.clip();
+    context.fillText(label, textX, height / 2);
+    context.restore();
+  }
+  return new Promise((resolve, reject) => canvas.toBlob(
+    (blob) => blob ? resolve(blob) : reject(new Error("invalid-sponsor-logo")), "image/png"));
+}
+
 async function uploadSponsorLogo() {
   const file = sponsorLogoInput.files[0];
-  if (!file) return { logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls };
+  if (!file) return { logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls,
+    googleWideLogoUrls: sponsorGoogleWideLogoUrls };
   if (!file.type.startsWith("image/")) throw new Error("invalid-sponsor-logo");
   if (file.size > 5 * 1024 * 1024) throw new Error("sponsor-logo-too-large");
   const bitmap = await createImageBitmap(file);
@@ -564,9 +604,14 @@ async function uploadSponsorLogo() {
     const googleVariants = [
       ["x1", 220, 220], ["x2", 440, 440], ["x3", 660, 660],
     ];
+    const googleWideVariants = [
+      ["x1", 400, 125], ["x2", 800, 250], ["x3", 1280, 400],
+    ];
+    const sponsorName = document.getElementById("sponsor-name").value.trim();
     const stamp = Date.now();
     const uploadedApple = {};
     const uploadedGoogle = {};
+    const uploadedGoogleWide = {};
     for (const [key, width, height] of appleVariants) {
       const blob = await resizedLogoBlob(bitmap, width, height);
       const target = sdk.ref(sdk.storage,
@@ -581,9 +626,18 @@ async function uploadSponsorLogo() {
       await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
       uploadedGoogle[key] = await sdk.getDownloadURL(target);
     }
+    for (const [key, width, height] of googleWideVariants) {
+      const blob = await wideSponsorLogoBlob(bitmap, sponsorName, width, height);
+      const target = sdk.ref(sdk.storage,
+        `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-google-wide-${key}-${stamp}.png`);
+      await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
+      uploadedGoogleWide[key] = await sdk.getDownloadURL(target);
+    }
     sponsorLogoUrls = uploadedApple;
     sponsorGoogleLogoUrls = uploadedGoogle;
-    return { logoUrls: uploadedApple, googleLogoUrls: uploadedGoogle };
+    sponsorGoogleWideLogoUrls = uploadedGoogleWide;
+    return { logoUrls: uploadedApple, googleLogoUrls: uploadedGoogle,
+      googleWideLogoUrls: uploadedGoogleWide };
   } finally {
     bitmap.close();
   }
@@ -702,6 +756,8 @@ function fillSponsor(data) {
   sponsorLogoUrls = sponsor.logoUrls && typeof sponsor.logoUrls === "object" ? { ...sponsor.logoUrls } : {};
   sponsorGoogleLogoUrls = sponsor.googleLogoUrls && typeof sponsor.googleLogoUrls === "object"
     ? { ...sponsor.googleLogoUrls } : {};
+  sponsorGoogleWideLogoUrls = sponsor.googleWideLogoUrls && typeof sponsor.googleWideLogoUrls === "object"
+    ? { ...sponsor.googleWideLogoUrls } : {};
   renderSponsorLogo();
   renderSponsorPlaces();
   sponsorSay(sponsorPlaces.length
@@ -735,6 +791,7 @@ document.getElementById("sponsor-logo-remove").addEventListener("click", () => {
   clearSponsorLogoPreviewUrl();
   sponsorLogoUrls = {};
   sponsorGoogleLogoUrls = {};
+  sponsorGoogleWideLogoUrls = {};
   renderSponsorLogo();
   sponsorSay("Logo quitado. Guarda el auspiciador para confirmar el cambio.");
 });
@@ -776,6 +833,7 @@ async function saveSponsorConfiguration() {
       redemptionExpiresOn,
       logoUrls: sponsorLogoUrls,
       googleLogoUrls: sponsorGoogleLogoUrls,
+      googleWideLogoUrls: sponsorGoogleWideLogoUrls,
       includeEventLocation: false,
       locations: sponsorPlaces
     };
@@ -802,6 +860,7 @@ async function saveSponsorConfiguration() {
     eventData.walletSponsor = { name, benefits, redemptionAddress,
       redemptionExpiresAt: new Date(redemptionExpiresOn + "T23:59:59"),
       logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls,
+      googleWideLogoUrls: sponsorGoogleWideLogoUrls,
       locations: sponsorPlaces.map((place) => ({ ...place })),
       includeEventLocation: false };
     sponsorLogoInput.value = "";
