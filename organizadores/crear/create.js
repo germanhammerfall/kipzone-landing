@@ -1,4 +1,4 @@
-import { authMessage, callOrganizerFunction, combineDateAndTime, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle } from "../firebase-client.js";
+import { authMessage, callOrganizerFunction, combineDateAndTime, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle } from "../firebase-client.js?v=20260929-canonical-images";
 
 const PLACES_PROXY = "https://gmaps-proxy-semevis3fa-uc.a.run.app";
 const TOPICS = ["Correr", "Social", "Zona 2", "Principiantes", "5K", "10K", "Trail", "Entrenamiento", "Bienestar", "Competencia", "Familiar", "Nocturno"];
@@ -337,7 +337,7 @@ createForm.addEventListener("submit", async (event) => {
       googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
       appleWalletEnabled: document.getElementById("apple-wallet-enabled").checked,
       topics: [...selectedTopics],
-      imageUrl: image,
+      imagen: image,
       creationSource: "organizer_web",
       isRepeating: recurring,
       workOutList: [],

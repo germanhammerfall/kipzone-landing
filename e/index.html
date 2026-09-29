@@ -346,7 +346,7 @@ function renderEvent(doc){
   const f=doc.fields||{};
   const start=val(f.nextStart)||val(f.startDate)||val(f.startTime);
   eventData={
-    title:val(f.title)||'Corrida grupal',image:val(f.imagen)||val(f.photo)||'',
+    title:val(f.title)||'Corrida grupal',image:val(f.imagen)||'',
     address:val(f.address)||'',start:start,
     participants:Math.max(0,Number(val(f.participantsCount))||0),
     webRegistrations:Math.max(0,Number(val(f.webRegistrationsCount))||0),

@@ -36,7 +36,7 @@
         <label>Nombre del auspiciador<input id="sponsor-name" maxlength="120" placeholder="Ej: MindFit"></label>
         <label>Beneficio que verá el corredor<textarea id="sponsor-benefits" rows="3" maxlength="500" placeholder="Ej: Día de entrenamiento gratis"></textarea><small class="event-field-help">Este texto será el título principal de la tarjeta.</small></label>
         <div class="sponsor-logo-field">
-          <label>Logo del auspiciador<input id="sponsor-logo" type="file" accept="image/png,image/jpeg,image/webp"><small class="event-field-help">Usa preferentemente un logo cuadrado o circular, con fondo transparente y buena calidad. Generaremos automáticamente los formatos para Google y Apple Wallet. Máximo 5 MB.</small></label>
+          <label>Logo del auspiciador<input id="sponsor-logo" type="file" accept="image/png,image/jpeg,image/webp"><small class="event-field-help">Sube el símbolo cuadrado o circular, preferentemente con fondo transparente. La web creará un único logo horizontal 16:5 con el nombre del gimnasio para Google y Apple Wallet. Máximo 5 MB.</small></label>
           <div id="sponsor-logo-preview" class="sponsor-logo-preview" hidden><img alt="Logo del auspiciador"><button id="sponsor-logo-remove" type="button">Quitar logo</button></div>
         </div>
         <div class="edit-place-search"><label>Agregar local del auspiciador<input id="sponsor-address" maxlength="220" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sponsor-suggestions" placeholder="Escribe la dirección y elige una sugerencia"></label>
@@ -76,6 +76,6 @@
       </div></section>
     </section>
   </main>
-  <script type="module" src="edit.js?v=20260929-wallet-wide-logo"></script>
+  <script type="module" src="edit.js?v=20260929-canonical-images"></script>
 </body>
 </html>

@@ -76,7 +76,7 @@ export function eventDate(data) {
 }
 
 export function eventImage(data) {
-  return String(data?.imagen || data?.photo || data?.image || "").trim();
+  return String(data?.imagen || "").trim();
 }
 
 function referenceId(value) {

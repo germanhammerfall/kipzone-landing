@@ -1,4 +1,4 @@
-import { asDate, authMessage, callOrganizerFunction, combineDateAndTime, dateInputValue, eventBelongsToUser, eventCoordinates, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js?v=20260828-profile-audit";
+import { asDate, authMessage, callOrganizerFunction, combineDateAndTime, dateInputValue, eventBelongsToUser, eventCoordinates, getFirebase, nextWeeklyOccurrence, safeHttpUrl, signInWithGoogle, timeInputValue } from "../firebase-client.js?v=20260929-canonical-images";
 
 const PLACES_PROXY = "https://gmaps-proxy-semevis3fa-uc.a.run.app";
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";
@@ -67,7 +67,9 @@ function fillForm(data) {
   document.getElementById("address").value = address;
   document.getElementById("topics").value = Array.isArray(data.topics) ? data.topics.join(", ") : "";
   document.getElementById("payment-link").value = data.paymentLink || "";
-  document.getElementById("image-url").value = data.imageUrl || data.imagen || data.photo || data.image || "";
+  // `imagen` es la portada oficial del evento. Los alias anteriores no deben
+  // volver a ganar por orden de lectura, porque podían mostrar un flyer viejo.
+  document.getElementById("image-url").value = data.imagen || "";
   document.getElementById("status").textContent = data.status === "Inactivo" ? "Inactivo" : "Activo";
   document.getElementById("google-wallet-enabled").checked = data.googleWalletEnabled === true;
   document.getElementById("apple-wallet-enabled").checked = data.appleWalletEnabled === true;
@@ -396,7 +398,7 @@ editForm.addEventListener("submit", async (event) => {
       topics,
       placeId: selectedPlace.placeId || String(eventData.placeId || ""),
       radiusKm: Math.max(0.1, Number(eventData.radiusKm) || 1),
-      imageUrl: image,
+      imagen: image,
       discoverable: document.getElementById("discoverable").checked,
       googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
       appleWalletEnabled: document.getElementById("apple-wallet-enabled").checked,
@@ -505,9 +507,7 @@ const appleWalletCheckbox = document.getElementById("apple-wallet-enabled");
 const sponsorLogoInput = document.getElementById("sponsor-logo");
 const sponsorLogoPreview = document.getElementById("sponsor-logo-preview");
 let sponsorPlaces = [];
-let sponsorLogoUrls = {};
-let sponsorGoogleLogoUrls = {};
-let sponsorGoogleWideLogoUrls = {};
+let sponsorLogoUrl = "";
 let sponsorLogoPreviewUrl = "";
 let sponsorTimer;
 let sponsorRequest;
@@ -522,8 +522,7 @@ function toggleSponsorSection() {
 }
 
 function sponsorLogoSource() {
-  return sponsorGoogleLogoUrls.x3 || sponsorGoogleLogoUrls.x2 || sponsorGoogleLogoUrls.x1 ||
-    sponsorLogoUrls.x3 || sponsorLogoUrls.x2 || sponsorLogoUrls.x1 || "";
+  return sponsorLogoUrl;
 }
 
 function renderSponsorLogo(source = sponsorLogoSource()) {
@@ -535,21 +534,6 @@ function renderSponsorLogo(source = sponsorLogoSource()) {
 function clearSponsorLogoPreviewUrl() {
   if (sponsorLogoPreviewUrl) URL.revokeObjectURL(sponsorLogoPreviewUrl);
   sponsorLogoPreviewUrl = "";
-}
-
-function resizedLogoBlob(bitmap, width, height) {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-  context.clearRect(0, 0, width, height);
-  const scale = Math.min(width / bitmap.width, height / bitmap.height);
-  const drawWidth = Math.max(1, Math.round(bitmap.width * scale));
-  const drawHeight = Math.max(1, Math.round(bitmap.height * scale));
-  context.drawImage(bitmap, Math.round((width - drawWidth) / 2),
-    Math.round((height - drawHeight) / 2), drawWidth, drawHeight);
-  return new Promise((resolve, reject) => canvas.toBlob(
-    (blob) => blob ? resolve(blob) : reject(new Error("invalid-sponsor-logo")), "image/png"));
 }
 
 function wideSponsorLogoBlob(bitmap, sponsorName, width, height) {
@@ -592,52 +576,23 @@ function wideSponsorLogoBlob(bitmap, sponsorName, width, height) {
 
 async function uploadSponsorLogo() {
   const file = sponsorLogoInput.files[0];
-  if (!file) return { logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls,
-    googleWideLogoUrls: sponsorGoogleWideLogoUrls };
+  if (!file) return { logoUrl: sponsorLogoUrl };
   if (!file.type.startsWith("image/")) throw new Error("invalid-sponsor-logo");
   if (file.size > 5 * 1024 * 1024) throw new Error("sponsor-logo-too-large");
   const bitmap = await createImageBitmap(file);
   try {
-    const appleVariants = [
-      ["x1", 160, 50], ["x2", 320, 100], ["x3", 480, 150],
-    ];
-    const googleVariants = [
-      ["x1", 220, 220], ["x2", 440, 440], ["x3", 660, 660],
-    ];
-    const googleWideVariants = [
-      ["x1", 400, 125], ["x2", 800, 250], ["x3", 1280, 400],
-    ];
     const sponsorName = document.getElementById("sponsor-name").value.trim();
     const stamp = Date.now();
-    const uploadedApple = {};
-    const uploadedGoogle = {};
-    const uploadedGoogleWide = {};
-    for (const [key, width, height] of appleVariants) {
-      const blob = await resizedLogoBlob(bitmap, width, height);
-      const target = sdk.ref(sdk.storage,
-        `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-${key}-${stamp}.png`);
-      await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
-      uploadedApple[key] = await sdk.getDownloadURL(target);
-    }
-    for (const [key, width, height] of googleVariants) {
-      const blob = await resizedLogoBlob(bitmap, width, height);
-      const target = sdk.ref(sdk.storage,
-        `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-google-${key}-${stamp}.png`);
-      await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
-      uploadedGoogle[key] = await sdk.getDownloadURL(target);
-    }
-    for (const [key, width, height] of googleWideVariants) {
-      const blob = await wideSponsorLogoBlob(bitmap, sponsorName, width, height);
-      const target = sdk.ref(sdk.storage,
-        `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-google-wide-${key}-${stamp}.png`);
-      await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
-      uploadedGoogleWide[key] = await sdk.getDownloadURL(target);
-    }
-    sponsorLogoUrls = uploadedApple;
-    sponsorGoogleLogoUrls = uploadedGoogle;
-    sponsorGoogleWideLogoUrls = uploadedGoogleWide;
-    return { logoUrls: uploadedApple, googleLogoUrls: uploadedGoogle,
-      googleWideLogoUrls: uploadedGoogleWide };
+    // Un único archivo canónico 16:5. Es la proporción usada por el encabezado
+    // ancho de Google Wallet; Apple genera sus tamaños al emitir el pase.
+    const blob = await wideSponsorLogoBlob(bitmap, sponsorName, 1280, 400);
+    const target = sdk.ref(sdk.storage,
+      `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-wallet-${stamp}.png`);
+    await sdk.uploadBytes(target, blob, {
+      contentType: "image/png", cacheControl: "public,max-age=31536000"
+    });
+    sponsorLogoUrl = await sdk.getDownloadURL(target);
+    return { logoUrl: sponsorLogoUrl };
   } finally {
     bitmap.close();
   }
@@ -753,11 +708,12 @@ function fillSponsor(data) {
   document.getElementById("sponsor-redemption-address").value = String(sponsor.redemptionAddress || sponsorPlaces[0]?.name || "");
   document.getElementById("sponsor-redemption-expiry").value =
     dateInputValue(asDate(sponsor.redemptionExpiresAt)) || DEFAULT_REDEMPTION_EXPIRY;
-  sponsorLogoUrls = sponsor.logoUrls && typeof sponsor.logoUrls === "object" ? { ...sponsor.logoUrls } : {};
-  sponsorGoogleLogoUrls = sponsor.googleLogoUrls && typeof sponsor.googleLogoUrls === "object"
-    ? { ...sponsor.googleLogoUrls } : {};
-  sponsorGoogleWideLogoUrls = sponsor.googleWideLogoUrls && typeof sponsor.googleWideLogoUrls === "object"
-    ? { ...sponsor.googleWideLogoUrls } : {};
+  const legacyWide = sponsor.googleWideLogoUrls && typeof sponsor.googleWideLogoUrls === "object"
+    ? sponsor.googleWideLogoUrls : {};
+  const legacyApple = sponsor.logoUrls && typeof sponsor.logoUrls === "object"
+    ? sponsor.logoUrls : {};
+  sponsorLogoUrl = String(sponsor.logoUrl || legacyWide.x3 || legacyWide.x2 ||
+    legacyWide.x1 || legacyApple.x3 || legacyApple.x2 || legacyApple.x1 || "");
   renderSponsorLogo();
   renderSponsorPlaces();
   sponsorSay(sponsorPlaces.length
@@ -789,9 +745,7 @@ sponsorLogoInput.addEventListener("change", () => {
 document.getElementById("sponsor-logo-remove").addEventListener("click", () => {
   sponsorLogoInput.value = "";
   clearSponsorLogoPreviewUrl();
-  sponsorLogoUrls = {};
-  sponsorGoogleLogoUrls = {};
-  sponsorGoogleWideLogoUrls = {};
+  sponsorLogoUrl = "";
   renderSponsorLogo();
   sponsorSay("Logo quitado. Guarda el auspiciador para confirmar el cambio.");
 });
@@ -831,9 +785,7 @@ async function saveSponsorConfiguration() {
       benefits,
       redemptionAddress,
       redemptionExpiresOn,
-      logoUrls: sponsorLogoUrls,
-      googleLogoUrls: sponsorGoogleLogoUrls,
-      googleWideLogoUrls: sponsorGoogleWideLogoUrls,
+      logoUrl: sponsorLogoUrl,
       includeEventLocation: false,
       locations: sponsorPlaces
     };
@@ -859,8 +811,7 @@ async function saveSponsorConfiguration() {
 
     eventData.walletSponsor = { name, benefits, redemptionAddress,
       redemptionExpiresAt: new Date(redemptionExpiresOn + "T23:59:59"),
-      logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls,
-      googleWideLogoUrls: sponsorGoogleWideLogoUrls,
+      logoUrl: sponsorLogoUrl,
       locations: sponsorPlaces.map((place) => ({ ...place })),
       includeEventLocation: false };
     sponsorLogoInput.value = "";
