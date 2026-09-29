@@ -114,8 +114,7 @@
       });
       image.addEventListener('error', () => { if (!objectUrl) preview.hidden = true; });
       syncCurrent();
-      const timer = setInterval(syncCurrent, 250);
-      setTimeout(() => clearInterval(timer), 15000);
+      setInterval(syncCurrent, 500);
     })();
   </script>
   <script type="module" src="edit.js?v=20260929-canonical-images"></script>
