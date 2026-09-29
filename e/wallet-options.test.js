@@ -38,3 +38,15 @@ test("desktop, Android and iPad retain automatic Google without any Apple option
     }
   }
 });
+
+test("a full shared quota offers no Wallet action on any device", () => {
+  for (const userAgent of [
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit Safari",
+    "Mozilla/5.0 (Linux; Android 15) Mobile",
+    "Mozilla/5.0 (Windows NT 10.0)",
+  ]) {
+    assert.deepEqual(walletOptions({ userAgent, googleEnabled: true, appleEnabled: true,
+      walletCouponsAvailable: false }),
+    { apple: false, google: false, autoGoogle: false });
+  }
+});
