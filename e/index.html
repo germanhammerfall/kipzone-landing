@@ -171,7 +171,7 @@
   <div id="app"><div class="state">Cargando el evento…</div></div>
 </main>
 <script src="./qrcode.min.js"></script>
-<script src="./wallet-options.js"></script>
+<script src="./wallet-options.js?v=20260929-wallet-cupo"></script>
 <script>
 const PROJECT = 'red-social-1cn89d';
 const API_KEY = 'AIzaSyCkjykS147iM4ncwxVm4uU4NGHlaXlUlqE';
@@ -358,11 +358,14 @@ function renderEvent(doc){
     checkIn:val(f.webRegistrationCheckInEnabled)===true,
     walletEnabled:val(f.googleWalletEnabled)===true,
     appleWalletEnabled:val(f.appleWalletEnabled)===true,
+    walletCouponLimit:Math.max(0,Math.trunc(Number(val(f.walletCouponLimit))||0)),
+    walletCouponsIssued:Math.max(0,Math.trunc(Number(val(f.walletCouponsIssuedCount))||0)),
     closed:val(f.webRegistrationClosed)===true||val(f.registrationClosed)===true
   };
   const e=eventData;
   e.ticketsIssued=Math.max(e.ticketsIssued,e.participants+e.webRegistrations);
   e.soldOut=e.ticketingEnabled&&e.ticketCapacity>0&&e.ticketsIssued>=e.ticketCapacity;
+  e.walletCouponsAvailable=e.walletCouponLimit===0||e.walletCouponsIssued<e.walletCouponLimit;
   if(!(e.start instanceof Date)||isNaN(e.start)){
     renderError('Este evento todavía no tiene una fecha válida.');return;
   }
@@ -650,7 +653,8 @@ const WALLET_MESSAGES={
 function showWalletOptions(registrationId,personalQrToken){
   const mode=window.kipzoneWalletOptions({userAgent:navigator.userAgent,
     platform:navigator.platform,
-    googleEnabled:eventData.walletEnabled,appleEnabled:eventData.appleWalletEnabled});
+    googleEnabled:eventData.walletEnabled,appleEnabled:eventData.appleWalletEnabled,
+    walletCouponsAvailable:eventData.walletCouponsAvailable});
   if(mode.autoGoogle){void startWalletIfEnabled(registrationId,personalQrToken);return;}
   if(!mode.apple)return;
   const root=document.getElementById('wallet-option');
@@ -676,17 +680,19 @@ async function startWalletIfEnabled(registrationId,personalQrToken){
   if(!eventData.walletEnabled)return;
   const root=document.getElementById('wallet-option');
   if(!root)return;
-  root.className='wallet-option';
-  root.innerHTML='<h2>Preparando tu entrada de Google Wallet</h2><p>Tu inscripción y QR ya son válidos. Abriremos Google Wallet enseguida.</p>'+
-    '<div class="wallet-note">La tarjeta usa este mismo evento y tu QR personal.</div>'+
-    '<div id="wallet-error" class="error wallet-error" role="alert"></div>';
   try{
     const client=await getPhoneSdk();
     const create=client.functionsSdk.httpsCallable(client.functions,'createGoogleWalletEventTicket');
     const response=await create({eventId:eventId,registrationId:registrationId,personalQrToken:personalQrToken});
+    if(response.data?.available===false){
+      root.removeAttribute('class');
+      root.replaceChildren();
+      return;
+    }
     if(response.data?.pendingApproval===true){
-      document.getElementById('wallet-error').textContent=String(response.data?.message||
-        'Google Wallet todavía no está disponible. Tu inscripción y QR siguen válidos; vuelve a abrir este enlace más tarde.');
+      root.className='wallet-option';
+      root.innerHTML='<p>'+esc(String(response.data?.message||
+        'Google Wallet todavía no está disponible. Tu inscripción y QR siguen válidos; vuelve a abrir este enlace más tarde.'))+'</p>';
       return;
     }
     const saveUrl=String(response.data?.saveUrl||'');
@@ -695,10 +701,9 @@ async function startWalletIfEnabled(registrationId,personalQrToken){
   }catch(error){
     const code=String(error&&error.code||'desconocido');
     console.error('No fue posible crear la entrada Google Wallet:',code,error);
-    document.getElementById('wallet-error').textContent=
-      'Tu inscripción y QR siguen válidos. '+
-      (WALLET_MESSAGES[code]||'No pudimos abrir Google Wallet; vuelve a abrir este enlace más tarde.')+
-      ' (código: '+code+')';
+    root.className='wallet-option';
+    root.innerHTML='<p>'+esc('Tu inscripción y QR siguen válidos. '+
+      (WALLET_MESSAGES[code]||'No pudimos abrir Google Wallet; vuelve a abrir este enlace más tarde.'))+'</p>';
   }
 }
 async function loadEvent(){
