@@ -71,6 +71,14 @@ function fillForm(data) {
   document.getElementById("status").textContent = data.status === "Inactivo" ? "Inactivo" : "Activo";
   document.getElementById("google-wallet-enabled").checked = data.googleWalletEnabled === true;
   document.getElementById("apple-wallet-enabled").checked = data.appleWalletEnabled === true;
+  const walletCouponLimitInput = document.getElementById("wallet-coupon-limit");
+  const walletCouponsIssued = Math.max(0, Math.trunc(Number(data.walletCouponsIssuedCount) || 0));
+  const walletCouponLimit = Math.max(0, Math.trunc(Number(data.walletCouponLimit) || 0));
+  walletCouponLimitInput.value = walletCouponLimit || "";
+  walletCouponLimitInput.min = String(Math.max(1, walletCouponsIssued));
+  document.getElementById("wallet-coupon-limit-hint").textContent = walletCouponsIssued > 0
+    ? `Ya se asignaron ${walletCouponsIssued} tarjetas. El límite no puede ser menor; Apple y Google comparten el mismo cupo.`
+    : "Apple y Google comparten este cupo. Cada inscripción usa una sola tarjeta. Déjalo vacío si no quieres límite.";
   const capacityInput = document.getElementById("ticket-capacity");
   const paidTicketing = data.ticketingEnabled === true && data.ticketPlan !== "free_only";
   const issued = Math.max(
@@ -354,6 +362,17 @@ editForm.addEventListener("submit", async (event) => {
   const ticketCapacity = paidTicketing ? Math.max(1, Number(eventData.ticketCapacity) || 1) : requestedCapacity;
   const paidRegistration = eventData.isPaidRegistration === true || eventData.paidRegistrationEnabled === true ||
     paidTicketing;
+  const requestedWalletCouponLimit = Math.max(
+    0,
+    Math.trunc(Number(document.getElementById("wallet-coupon-limit").value) || 0),
+  );
+  const walletCouponsIssued = Math.max(0, Math.trunc(Number(eventData.walletCouponsIssuedCount) || 0));
+  if (requestedWalletCouponLimit > 0 && requestedWalletCouponLimit < walletCouponsIssued) {
+    message.textContent = `El cupo Wallet no puede ser menor que las ${walletCouponsIssued} tarjetas ya asignadas.`;
+    message.classList.remove("success");
+    message.hidden = false;
+    return;
+  }
   if (paymentLink && !paidRegistration) {
     message.textContent = "La función actual solo permite links en eventos con inscripción pagada ya configurada.";
     message.classList.remove("success");
@@ -381,6 +400,7 @@ editForm.addEventListener("submit", async (event) => {
       discoverable: document.getElementById("discoverable").checked,
       googleWalletEnabled: document.getElementById("google-wallet-enabled").checked,
       appleWalletEnabled: document.getElementById("apple-wallet-enabled").checked,
+      walletCouponLimit: requestedWalletCouponLimit,
       ticketingEnabled,
       ticketPlan,
       ticketCapacity,
