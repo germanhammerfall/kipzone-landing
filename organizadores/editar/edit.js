@@ -506,6 +506,7 @@ const sponsorLogoInput = document.getElementById("sponsor-logo");
 const sponsorLogoPreview = document.getElementById("sponsor-logo-preview");
 let sponsorPlaces = [];
 let sponsorLogoUrls = {};
+let sponsorGoogleLogoUrls = {};
 let sponsorLogoPreviewUrl = "";
 let sponsorTimer;
 let sponsorRequest;
@@ -520,7 +521,8 @@ function toggleSponsorSection() {
 }
 
 function sponsorLogoSource() {
-  return sponsorLogoUrls.x3 || sponsorLogoUrls.x2 || sponsorLogoUrls.x1 || "";
+  return sponsorGoogleLogoUrls.x3 || sponsorGoogleLogoUrls.x2 || sponsorGoogleLogoUrls.x1 ||
+    sponsorLogoUrls.x3 || sponsorLogoUrls.x2 || sponsorLogoUrls.x1 || "";
 }
 
 function renderSponsorLogo(source = sponsorLogoSource()) {
@@ -551,25 +553,37 @@ function resizedLogoBlob(bitmap, width, height) {
 
 async function uploadSponsorLogo() {
   const file = sponsorLogoInput.files[0];
-  if (!file) return sponsorLogoUrls;
+  if (!file) return { logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls };
   if (!file.type.startsWith("image/")) throw new Error("invalid-sponsor-logo");
   if (file.size > 5 * 1024 * 1024) throw new Error("sponsor-logo-too-large");
   const bitmap = await createImageBitmap(file);
   try {
-    const variants = [
+    const appleVariants = [
       ["x1", 160, 50], ["x2", 320, 100], ["x3", 480, 150],
     ];
+    const googleVariants = [
+      ["x1", 220, 220], ["x2", 440, 440], ["x3", 660, 660],
+    ];
     const stamp = Date.now();
-    const uploaded = {};
-    for (const [key, width, height] of variants) {
+    const uploadedApple = {};
+    const uploadedGoogle = {};
+    for (const [key, width, height] of appleVariants) {
       const blob = await resizedLogoBlob(bitmap, width, height);
       const target = sdk.ref(sdk.storage,
         `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-${key}-${stamp}.png`);
       await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
-      uploaded[key] = await sdk.getDownloadURL(target);
+      uploadedApple[key] = await sdk.getDownloadURL(target);
     }
-    sponsorLogoUrls = uploaded;
-    return uploaded;
+    for (const [key, width, height] of googleVariants) {
+      const blob = await resizedLogoBlob(bitmap, width, height);
+      const target = sdk.ref(sdk.storage,
+        `users/${currentUser.uid}/wallet-sponsors/${eventId}/logo-google-${key}-${stamp}.png`);
+      await sdk.uploadBytes(target, blob, { contentType: "image/png", cacheControl: "public,max-age=31536000" });
+      uploadedGoogle[key] = await sdk.getDownloadURL(target);
+    }
+    sponsorLogoUrls = uploadedApple;
+    sponsorGoogleLogoUrls = uploadedGoogle;
+    return { logoUrls: uploadedApple, googleLogoUrls: uploadedGoogle };
   } finally {
     bitmap.close();
   }
@@ -686,6 +700,8 @@ function fillSponsor(data) {
   document.getElementById("sponsor-redemption-expiry").value =
     dateInputValue(asDate(sponsor.redemptionExpiresAt)) || DEFAULT_REDEMPTION_EXPIRY;
   sponsorLogoUrls = sponsor.logoUrls && typeof sponsor.logoUrls === "object" ? { ...sponsor.logoUrls } : {};
+  sponsorGoogleLogoUrls = sponsor.googleLogoUrls && typeof sponsor.googleLogoUrls === "object"
+    ? { ...sponsor.googleLogoUrls } : {};
   renderSponsorLogo();
   renderSponsorPlaces();
   sponsorSay(sponsorPlaces.length
@@ -718,6 +734,7 @@ document.getElementById("sponsor-logo-remove").addEventListener("click", () => {
   sponsorLogoInput.value = "";
   clearSponsorLogoPreviewUrl();
   sponsorLogoUrls = {};
+  sponsorGoogleLogoUrls = {};
   renderSponsorLogo();
   sponsorSay("Logo quitado. Guarda el auspiciador para confirmar el cambio.");
 });
@@ -758,6 +775,7 @@ async function saveSponsorConfiguration() {
       redemptionAddress,
       redemptionExpiresOn,
       logoUrls: sponsorLogoUrls,
+      googleLogoUrls: sponsorGoogleLogoUrls,
       includeEventLocation: false,
       locations: sponsorPlaces
     };
@@ -769,10 +787,10 @@ async function saveSponsorConfiguration() {
 
     if (sponsorLogoInput.files[0]) {
       try {
-        const uploadedLogoUrls = await uploadSponsorLogo();
+        const uploadedLogos = await uploadSponsorLogo();
         await callOrganizerFunction(sdk, "setGoogleWalletEventSponsor", {
           ...payload,
-          logoUrls: uploadedLogoUrls,
+          ...uploadedLogos,
         });
       } catch (logoError) {
         console.error("Los datos se guardaron, pero no fue posible subir el logo:", logoError);
@@ -783,7 +801,8 @@ async function saveSponsorConfiguration() {
 
     eventData.walletSponsor = { name, benefits, redemptionAddress,
       redemptionExpiresAt: new Date(redemptionExpiresOn + "T23:59:59"),
-      logoUrls: sponsorLogoUrls, locations: sponsorPlaces.map((place) => ({ ...place })),
+      logoUrls: sponsorLogoUrls, googleLogoUrls: sponsorGoogleLogoUrls,
+      locations: sponsorPlaces.map((place) => ({ ...place })),
       includeEventLocation: false };
     sponsorLogoInput.value = "";
     clearSponsorLogoPreviewUrl();
