@@ -76,7 +76,9 @@ export function eventDate(data) {
 }
 
 export function eventImage(data) {
-  return String(data?.imagen || "").trim();
+  // Firestore conserva un único campo: `imagen`. El feed público lo expone
+  // como `image`; aceptar ambos aquí no vuelve a crear campos en Firestore.
+  return String(data?.imagen || data?.image || "").trim();
 }
 
 function referenceId(value) {
