@@ -89,7 +89,7 @@ function eventPhotos(event) {
 // rules still decide access; no authentication, private documents or feed changes.
 async function loadDisplayFields(id) {
   const url = new URL(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/run_events/${encodeURIComponent(id)}`);
-  ["distanciaEstimada", "imagenAmigos", "discoverable", "status"].forEach((field) => {
+  ["distanciaEstimada", "imagenAmigos", "imagen", "discoverable", "status"].forEach((field) => {
     url.searchParams.append("mask.fieldPaths", field);
   });
   const controller = new AbortController();
@@ -101,6 +101,7 @@ async function loadDisplayFields(id) {
     if (fields.discoverable?.booleanValue !== true || fields.status?.stringValue !== "Activo") return null;
     return {
       distanciaEstimada: fields.distanciaEstimada?.doubleValue ?? fields.distanciaEstimada?.integerValue ?? null,
+      imagen: fields.imagen?.stringValue || "",
       imagenAmigos: (fields.imagenAmigos?.arrayValue?.values || [])
         .map((value) => value.stringValue).filter((value) => typeof value === "string"),
     };
@@ -113,6 +114,20 @@ async function loadDisplayFields(id) {
 }
 
 function renderDisplayFields(event, targets) {
+  const flyer = safeHttpUrl(event.imagen);
+  if (flyer && targets.hero) {
+    let image = targets.heroImage;
+    if (!image) {
+      image = node("img");
+      image.alt = `Flyer de ${event.title}`;
+      image.fetchPriority = "high";
+      targets.hero.insertBefore(image, targets.heroCopy);
+      targets.heroImage = image;
+      targets.heroFallback?.remove();
+      targets.hero.classList.remove("fallback");
+    }
+    image.src = flyer;
+  }
   targets.distance?.remove();
   targets.photos?.remove();
   const distance = distanceLabel(event.distanciaEstimada);
@@ -157,14 +172,17 @@ function render(event) {
   document.title = `${event.title} | KipZone`;
 
   const hero = node("section", `public-event-hero${event.image ? "" : " fallback"}`);
+  let heroImage = null;
+  let heroFallback = null;
   if (event.image) {
-    const image = node("img");
-    image.src = event.image;
-    image.alt = `Flyer de ${event.title}`;
-    image.fetchPriority = "high";
-    hero.append(image);
+    heroImage = node("img");
+    heroImage.src = event.image;
+    heroImage.alt = `Flyer de ${event.title}`;
+    heroImage.fetchPriority = "high";
+    hero.append(heroImage);
   } else {
-    hero.append(node("span", "", event.title.slice(0, 1).toUpperCase()));
+    heroFallback = node("span", "", event.title.slice(0, 1).toUpperCase());
+    hero.append(heroFallback);
   }
   const heroCopy = node("div", "public-event-hero-copy");
   const meta = node("div", "public-event-hero-meta");
@@ -209,7 +227,7 @@ function render(event) {
 
   layout.append(content, sidebar);
   root.append(hero, layout);
-  const targets = { meta, content };
+  const targets = { meta, content, hero, heroCopy, heroImage, heroFallback };
   renderDisplayFields(event, targets);
   return targets;
 }
