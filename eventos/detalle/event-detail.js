@@ -1,4 +1,4 @@
-import { firebaseConfig, formatEventDate, loadPublicEvents, safeHttpUrl } from "../../organizadores/firebase-client.js";
+import { firebaseConfig, formatEventDate, loadPublicEvents, safeHttpUrl } from "../../organizadores/firebase-client.js?v=20260929-unique-participants";
 
 const root = document.getElementById("event-detail");
 const eventId = new URLSearchParams(location.search).get("id")?.trim() || "";

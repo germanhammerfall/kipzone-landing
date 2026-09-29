@@ -153,7 +153,9 @@ export function normalizeEvent(id, data) {
     eventType: data.eventType === "alarm" ? "alarm" : "fixed",
     participantsCount,
     webRegistrationsCount,
-    totalParticipantsCount: participantsCount + webRegistrationsCount,
+    totalParticipantsCount: Number.isSafeInteger(data.totalParticipantsCount) && data.totalParticipantsCount >= 0
+      ? data.totalParticipantsCount
+      : participantsCount + webRegistrationsCount,
     paymentLink: safeHttpUrl(data.paymentLink),
     discoverable: data.discoverable !== false,
     status: String(data.status || "Activo"),
