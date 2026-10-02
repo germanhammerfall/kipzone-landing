@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none">
+  <symbol id="overview" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="14" y="3.5" width="6.5" height="7" rx="1.5"/><rect x="3.5" y="14" width="7" height="6.5" rx="1.5"/><rect x="14" y="14" width="6.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="activity" viewBox="0 0 24 24"><path d="M3 13h4l3-8 4 14 3-6h4"/></symbol>
+  <symbol id="flag" viewBox="0 0 24 24"><path d="M6 21V4m0 0c4-4 8 4 13 0v10c-5 4-9-4-13 0"/></symbol>
+  <symbol id="territory" viewBox="0 0 24 24"><path d="m4 8 8-5 8 4 1 10-9 4-9-5Z"/><path d="m9 12 2 2 5-5"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="runner" viewBox="0 0 24 24"><circle cx="15.5" cy="4.5" r="2"/><path d="m8 10 5-3 3 5h4m-7-5-3 8-6 1m6-1 5 3-1 4"/></symbol>
+  <symbol id="points" viewBox="0 0 24 24"><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6Z"/></symbol>
+  <symbol id="wallet" viewBox="0 0 24 24"><path d="M4 7V5.5A2.5 2.5 0 0 1 6.5 3H18v4M4 7h15a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><path d="M21 12h-5v5h5"/><circle cx="17.5" cy="14.5" r=".5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="arrow" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></symbol>
+</svg>

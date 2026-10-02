@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" fill="none">
+  <defs>
+    <linearGradient id="zone" x1="70" y1="80" x2="245" y2="205" gradientUnits="userSpaceOnUse"><stop stop-color="#D4E600" stop-opacity=".24"/><stop offset="1" stop-color="#D4E600" stop-opacity=".05"/></linearGradient>
+    <linearGradient id="edge" x1="55" y1="60" x2="270" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#EDFA63"/><stop offset="1" stop-color="#8B9700"/></linearGradient>
+  </defs>
+  <!-- Decorative street network; no geographic or activity data represented. -->
+  <g stroke="#6E786B" stroke-opacity=".28" stroke-width="1.2" stroke-linejoin="round"><path d="m4 139 90-42 191 84M23 185l110-50 159 72M47 222l124-56 138 61M1 95l66-30 131 58 110-50M52 37l97 43L271 24M64 16l-4 72 53 132M116 7l-3 61 54 139M179 12l-25 51 92 166M236 43l-31 56 69 157"/></g>
+  <g stroke="#72826B" stroke-opacity=".17" stroke-width=".7"><path d="m77 73 45 18-14 27-35-17ZM136 102l34 14-17 27-31-13ZM191 130l43 17-17 24-41-18ZM111 162l35 15-17 29-27-13Z"/></g>
+  <path d="m60 156 14-58 69-35 87 33 35 68-84 49-59-25Z" transform="translate(0 9)" fill="#D4E600" fill-opacity=".035" stroke="#D4E600" stroke-opacity=".12"/>
+  <path d="m60 156 14-58 69-35 87 33 35 68-84 49-59-25Z" fill="url(#zone)" stroke="url(#edge)" stroke-width="2" stroke-linejoin="round"/>
+  <path d="m69 151 13-48 62-31 80 30 29 58-74 43-52-24Z" stroke="#D4E600" stroke-opacity=".2" stroke-dasharray="3 5"/>
+  <path d="m60 156 14-58 69-35" stroke="#EDFA63" stroke-width="3" stroke-linecap="round"/>
+  <g fill="#D4E600"><circle cx="143" cy="63" r="3"/><circle cx="230" cy="96" r="3"/><circle cx="265" cy="164" r="3"/></g>
+  <ellipse cx="160" cy="146" rx="22" ry="8" fill="#080808" fill-opacity=".4"/>
+  <path d="M161 141V98m0 0 29 9-29 11" stroke="#EBF75E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m164 100 23 7-23 8" fill="#D4E600" fill-opacity=".2"/>
+  <circle cx="60" cy="156" r="11" stroke="#00D9FF" stroke-opacity=".22"/><circle cx="60" cy="156" r="5.5" fill="#00D9FF" stroke="#0B0C0B" stroke-width="2"/>
+  <g stroke="#657060" stroke-opacity=".5"><path d="M279 42v14m-7-7h14M37 215v10m-5-5h10"/></g>
+</svg>
