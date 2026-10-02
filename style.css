@@ -49,8 +49,8 @@ img,video{max-width:100%}
 .button:hover{transform:translateY(-2px)}
 .button-primary{background:var(--green);color:#080808;box-shadow:0 16px 46px rgba(212,230,0,.22)}
 .button-primary:hover{box-shadow:0 22px 60px rgba(212,230,0,.34)}
-.button-soon{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:rgba(255,255,255,.76);cursor:not-allowed;box-shadow:none}
-.button-soon:hover{transform:none}
+.button-secondary{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:var(--white);box-shadow:none}
+.button-secondary:hover,.button-secondary:focus-visible{border-color:var(--green);background:rgba(212,230,0,.1)}
 
 .hero-device{position:relative;z-index:2;justify-self:center;width:min(430px,33vw);animation:slideInDevice .9s ease .22s both;pointer-events:none;will-change:transform}
 .phone-shell{position:relative;width:100%;background:transparent;filter:drop-shadow(0 32px 72px rgba(0,0,0,.72)) drop-shadow(0 0 28px rgba(0,217,255,.13));overflow:visible}
