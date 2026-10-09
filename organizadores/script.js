@@ -125,6 +125,14 @@ const eventStory = document.querySelector('.event-story');
 const eventStoryVideo = eventStory?.querySelector('video');
 let eventStoryFrame = 0;
 let eventStoryTarget = 0;
+// The card starts rising at 2.85 s in this recording. Follow the displayed
+// frame, so the pointer also disappears when scrolling back before the reveal.
+const syncEventStoryCard = () => {
+  eventStory?.classList.toggle('event-story-card-visible', Boolean(
+    eventStoryVideo && !eventStoryVideo.error &&
+    eventStoryVideo.readyState >= 2 && eventStoryVideo.currentTime >= 2.85
+  ));
+};
 const seekEventStory = () => {
   if (!eventStoryVideo || eventStoryVideo.seeking ||
       !Number.isFinite(eventStoryVideo.duration) || eventStoryVideo.readyState < 1) return;
@@ -154,10 +162,14 @@ const requestEventStorySync = () => {
 if (eventStoryVideo) {
   eventStoryVideo.addEventListener('loadedmetadata', requestEventStorySync);
   eventStoryVideo.addEventListener('loadeddata', requestEventStorySync);
+  eventStoryVideo.addEventListener('loadeddata', syncEventStoryCard);
+  eventStoryVideo.addEventListener('timeupdate', syncEventStoryCard);
   eventStoryVideo.addEventListener('seeked', () => {
+    syncEventStoryCard();
     if (!reducedMotion.matches) seekEventStory();
   });
   eventStoryVideo.addEventListener('error', () => {
+    syncEventStoryCard();
     eventStory.querySelector('.event-story-error').hidden = false;
   });
   const storyObserver = new IntersectionObserver((entries) => {
