@@ -120,6 +120,59 @@ window.addEventListener('resize', requestTerritorySync);
 reducedMotion.addEventListener('change', requestTerritorySync);
 requestTerritorySync();
 
+// The real event recording follows page scroll; keep only the latest seek.
+const eventStory = document.querySelector('.event-story');
+const eventStoryVideo = eventStory?.querySelector('video');
+let eventStoryFrame = 0;
+let eventStoryTarget = 0;
+const seekEventStory = () => {
+  if (!eventStoryVideo || eventStoryVideo.seeking ||
+      !Number.isFinite(eventStoryVideo.duration) || eventStoryVideo.readyState < 1) return;
+  if (Math.abs(eventStoryVideo.currentTime - eventStoryTarget) > 0.025) {
+    eventStoryVideo.currentTime = eventStoryTarget;
+  }
+};
+const syncEventStory = () => {
+  eventStoryFrame = 0;
+  if (!eventStory || !eventStoryVideo) return;
+  eventStoryVideo.controls = reducedMotion.matches;
+  if (reducedMotion.matches) return;
+  const topbarHeight = window.innerWidth <= 900 ? 68 : 76;
+  const travel = Math.max(1, eventStory.offsetHeight - (window.innerHeight - topbarHeight));
+  const progress = Math.min(1, Math.max(0, (topbarHeight - eventStory.getBoundingClientRect().top) / travel));
+  eventStory.style.setProperty('--story-progress', String(progress));
+  if (Number.isFinite(eventStoryVideo.duration)) {
+    // Hold the event card on screen during the last portion of the section.
+    eventStoryTarget = Math.min(progress / 0.9, 1) * Math.max(0, eventStoryVideo.duration - 0.05);
+    eventStoryVideo.pause();
+    seekEventStory();
+  }
+};
+const requestEventStorySync = () => {
+  if (!eventStoryFrame) eventStoryFrame = requestAnimationFrame(syncEventStory);
+};
+if (eventStoryVideo) {
+  eventStoryVideo.addEventListener('loadedmetadata', requestEventStorySync);
+  eventStoryVideo.addEventListener('loadeddata', requestEventStorySync);
+  eventStoryVideo.addEventListener('seeked', () => {
+    if (!reducedMotion.matches) seekEventStory();
+  });
+  eventStoryVideo.addEventListener('error', () => {
+    eventStory.querySelector('.event-story-error').hidden = false;
+  });
+  const storyObserver = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) {
+      eventStoryVideo.preload = 'auto';
+      storyObserver.disconnect();
+    }
+  }, { rootMargin: '400px' });
+  storyObserver.observe(eventStory);
+  window.addEventListener('scroll', requestEventStorySync, { passive: true });
+  window.addEventListener('resize', requestEventStorySync);
+  reducedMotion.addEventListener('change', requestEventStorySync);
+  requestEventStorySync();
+}
+
 document.querySelectorAll('.faq article').forEach((item) => {
   const button = item.querySelector('button');
   const icon = item.querySelector('button b');
@@ -130,3 +183,4 @@ document.querySelectorAll('.faq article').forEach((item) => {
     if (icon) icon.textContent = willOpen ? '−' : '+';
   });
 });
+
