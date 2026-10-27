@@ -120,3 +120,39 @@ Falta contrastar orden y redacción con capturas originales de Runna y probar
 navegadores nativos de Facebook/Instagram antes de lanzar campañas. La web es
 el destino del anuncio; sus pantallas no sustituyen los archivos creativos de
 Stories/Reels.
+
+## Galería completa de pantallas
+
+- `/plan/`: encuesta funcional, sin respuestas precargadas.
+- `/plan/pantallas.html`: catálogo de siete recorridos, con cada pregunta,
+  las tres pausas, bienvenida, revisión y cierre. Selector por ruta y enlaces
+  individuales para revisión. No es una landing para enviar publicidad.
+- `/plan/preview.html?scenario=race&screen=goal`: muestra una pantalla real
+  con datos de ejemplo. La vista de revisión no lee, borra ni guarda el borrador
+  del usuario. Los ejemplos se cargan únicamente cuando el HTML declara
+  `data-preview="true"`; el cuestionario público no interpreta estos parámetros.
+
+Los siete ejemplos cubren carrera con evento, sin evento, distancia personalizada,
+mejora, constancia, iniciación y regreso. Las alternativas de selección permanecen
+visibles en cada pantalla; no se crean pantallas ficticias para respuestas que no
+cambian de paso. La fecha de ejemplo se calcula al abrir para evitar ejemplos caducados.
+
+## Pendiente para un MVP conectado
+
+La interfaz está completa dentro del alcance aprobado. Para recibir usuarios reales
+que terminen con su plan en la app se necesita definir e implementar:
+
+1. Colección/campos Firebase y contrato del generador; distinguir respuestas del
+   cuestionario de los datos adicionales requeridos por el motor deportivo.
+2. Identidad y traspaso: login o vínculo seguro entre borrador web y cuenta de la app,
+   evitando pedir respuestas dos veces. Nunca pasar respuestas personales por la URL.
+3. Acción final: descarga de app, registro o pago; enlaces reales por plataforma,
+   y qué ocurre cuando la app ya está instalada.
+4. Publicación de `/plan/` en el dominio existente, reglas/validación de servidor,
+   permisos de datos y prueba de extremo a extremo en Facebook/Instagram Android/iOS.
+5. Si se medirán campañas: identificador y eventos aprobados de Meta, consentimiento
+   cuando corresponda; no incluir respuestas ni datos deportivos en eventos publicitarios.
+
+Ninguna de estas integraciones se simula como si ya funcionara. No hace falta
+contratar un constructor de encuestas para utilizar este código; hosting y servicios
+conectados dependen del uso y de las cuentas existentes.

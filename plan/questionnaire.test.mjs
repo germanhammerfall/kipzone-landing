@@ -25,3 +25,17 @@ for(const goal of ['race','improve','wellbeing','startRunning','returnToRunning'
 test('editorial screens can be removed without removing any question',()=>{const d=make();assert.ok(stepsFor(d,[]).every(s=>s.type!=='editorial'));assert.ok(stepsFor(d,[]).some(s=>s.id==='availableDays'));});
 test('saved UI drafts expire after seven days and do not load old engine contracts',()=>{const d=make();pruneAnswers(d);const now=Date.now(),raw=JSON.stringify({schemaVersion:SCHEMA,savedAt:now,draft:d});assert.deepEqual(decodeSaved(raw,now),d);assert.equal(decodeSaved(raw,now+TTL+1),null);assert.equal(decodeSaved(JSON.stringify({schemaVersion:1,savedAt:now,draft:d})),null);});
 test('malformed drafts do not reach the renderer',()=>{for(const raw of ['null','{',JSON.stringify({schemaVersion:SCHEMA,savedAt:Date.now(),draft:{schemaVersion:SCHEMA,answers:{availableDays:'lunes'}}})])assert.equal(decodeSaved(raw),null);});
+
+// The screen catalogue must use valid examples rather than unfinished forms.
+const {scenarios,exampleDraft,screensFor}=await import('./preview-data.mjs');
+for(const scenario of scenarios){
+  test(`catalogue ${scenario.id} can reach a valid review and completion`,()=>{
+    const draft=exampleDraft(scenario.id);
+    for(const step of stepsFor(draft))assert.equal(validateStep(step,draft),'',step.id);
+    const screens=screensFor(scenario.id);
+    assert.equal(new Set(screens.map(s=>s.id)).size,screens.length);
+    assert.equal(screens[0].id,'welcome');
+    assert.equal(screens.at(-2).id,'review');
+    assert.equal(screens.at(-1).id,'result');
+  });
+}

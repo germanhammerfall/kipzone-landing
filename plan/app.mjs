@@ -1,12 +1,19 @@
 import {SCHEMA,STORAGE_KEY,stepsFor,validateStep,createDraft,pruneAnswers,decodeSaved,weekdays,formatDate,dateKey,goalLabels,distanceLabels} from './questionnaire.mjs';
 const app=document.querySelector('#app');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const preview=document.body.dataset.preview==='true';
 let draft=createDraft(),view='welcome',remember=false,saved=null,editing=false;
-try{saved=decodeSaved(localStorage.getItem(STORAGE_KEY));}catch{}
-function save(){if(remember)try{localStorage.setItem(STORAGE_KEY,JSON.stringify({schemaVersion:SCHEMA,savedAt:Date.now(),draft}));}catch{document.querySelector('#storage-status')?.replaceChildren('No se pudo guardar. Mantén esta página abierta.');}}
-function forget(){try{localStorage.removeItem(STORAGE_KEY);}catch{}saved=null;remember=false;}
+if(preview){
+  const {exampleDraft}=await import('./preview-data.mjs');
+  const params=new URLSearchParams(location.search);
+  draft=exampleDraft(params.get('scenario')||'race');
+  const requested=params.get('screen');
+  view=['welcome','review','result',...stepsFor(draft).map(s=>s.id)].includes(requested)?requested:'welcome';
+}else try{saved=decodeSaved(localStorage.getItem(STORAGE_KEY));}catch{}
+function save(){if(!preview&&remember)try{localStorage.setItem(STORAGE_KEY,JSON.stringify({schemaVersion:SCHEMA,savedAt:Date.now(),draft}));}catch{document.querySelector('#storage-status')?.replaceChildren('No se pudo guardar. Mantén esta página abierta.');}}
+function forget(){try{if(!preview)localStorage.removeItem(STORAGE_KEY);}catch{}saved=null;remember=false;}
 function go(next,replace=false){view=next;history[replace?'replaceState':'pushState']({view},'',`#${next}`);render();window.scrollTo(0,0);document.querySelector('h1')?.focus({preventScroll:true});}
-history.replaceState({view},'','#welcome');
+history.replaceState({view},'',`#${view}`);
 window.addEventListener('popstate',e=>{const v=e.state?.view;view=['welcome','review','result',...stepsFor(draft).map(s=>s.id)].includes(v)?v:'welcome';editing=false;render();document.querySelector('h1')?.focus({preventScroll:true});});
 const back=target=>`<button class="back" data-go="${esc(target)}" type="button"><span aria-hidden="true">←</span> Volver</button>`;
 const next=label=>`<div class="action-area"><p class="error" id="error" role="alert"></p><button class="primary" type="submit">${label||'Continuar'}<span aria-hidden="true">→</span></button></div>`;
@@ -78,3 +85,5 @@ function result(){
   app.innerHTML=`<section class="completion">${back('review')}<div class="eyebrow">Cuestionario completado</div><h1 tabindex="-1">Tus respuestas,<br><em>listas.</em></h1><div class="finish-art" role="img" aria-label="Una mujer y un hombre corriendo de espaldas"></div><div class="profile-summary"><span>${esc(goalLabels[a.goal])}</span>${a.distance?`<span>${esc(distanceLabels[a.distance])}</span>`:''}<span>${esc(a.runsPerWeek)} días / semana</span></div><button class="primary" data-go="review">Revisar mis respuestas <span aria-hidden="true">↗</span></button><p class="fine">Vista previa del cuestionario. Aún no genera un plan.</p></section>`;
 }
 render();
+
+if(preview){document.querySelector('.site-footer span').textContent='DEMOSTRACIÓN · DATOS DE EJEMPLO';document.querySelector('.brand').href='./pantallas.html';}
