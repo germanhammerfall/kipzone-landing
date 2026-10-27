@@ -1,98 +1,74 @@
-# Cuestionario web de KipZone — primera versión
+# Cuestionario KipZone — maqueta funcional, versión 2
 
-Ruta prevista: `/plan/`. HTML, CSS y módulos JavaScript, sin dependencias ni
-servicios de formularios de pago. No se añade enlace desde la portada existente.
+Ruta `/plan/`, rama `feat/cuestionario-plan-web`, PR #19.
 
-## Alcance
+Esta entrega se concentra en pantallas, preguntas, botones y navegación.
+No conecta Firebase, no define sus campos, no genera un plan, no evalúa
+compatibilidad deportiva, no cobra ni ofrece resultados físicos.
 
-- Portada vertical, identidad negra/blanca/lima, wordmark existente y referencia
-  visual adjuntada por el propietario, conservada en `assets/runner-brand.webp`.
-- Una pregunta o bloque semanal por pantalla; navegación hacia atrás, progreso,
-  revisión y edición. Diseño adaptable, incluyendo pantallas pequeñas con scroll.
-- Objetivo, experiencia, confirmaciones, carga actual, disponibilidad futura,
-  preferencias, horizonte, carrera opcional, una referencia opcional y cuatro
-  semanas completas fechadas. Las fechas se manejan como días civiles locales.
-- Rutas cortas para casos que el alcance inicial no admite. No se cobra.
-- Resultado preliminar, descarga explícita de respuestas JSON y enlace al bloque
-  de descarga ya existente en la web. No se promete importar el JSON en la app.
+## Diseño
 
-No hay creación de cuenta, escritura en Firestore, generación de sesiones, pago,
-sincronización con KipZone ni medición de conversiones. El sitio no realiza
-peticiones de respuestas, no incluye Pixel y no coloca datos en URLs. Sus recursos
-se cargan desde el propio sitio. La ruta lleva `noindex` mientras se revisa.
+- Híbrido: portada/cierre negros con fotografía; preguntas claras sobre blanco cálido.
+- Amarillo lima `#d4f500`, negro `#0a0d09`, blanco cálido `#f4f5ef`.
+- Corredora y corredor anónimos, de espaldas, con presencia equivalente.
+- Preguntas breves, sin párrafos promocionales entre pantallas.
+- Botones grandes, selección única/múltiple, números con accesos rápidos,
+  fechas, tiempo, campo de nombre opcional y revisión editable.
+- Formato móvil vertical, con scroll cuando hace falta y adaptación a pantallas cortas.
 
-## Persistencia y privacidad
+`assets/runners-anonymous-v2.webp` procede de una imagen generada para esta
+interfaz con la herramienta integrada de generación de imágenes. Se optimizó
+su codificación para la web; el original se conserva fuera del repositorio.
+Prompt: fotografía deportiva vertical 9:16, una mujer y un hombre corredores
+recreativos, vistos de espaldas sin caras identificables, ropa negra con detalles
+lima, parque urbano al anochecer, espacio superior oscuro para tipografía,
+reflejos discretos de ruta en el suelo, sin texto/logos/celebridades.
 
-Las respuestas viven en memoria salvo consentimiento explícito para conservarlas
-en este navegador. El guardado local caduca a los siete días desde la última
-edición; no es una copia en la cuenta. Incluye información declarada de salud y
-entrenamiento, anunciado junto al consentimiento. La versión/esquema, fechas,
-tipos básicos y caducidad se comprueban al recuperar. Borrar no afecta otros datos
-de la web. El archivo descargado puede contener estas mismas respuestas.
+## Recorridos
 
-Sin consentimiento, recargar pierde el borrador. Volver y avanzar dentro del
-cuestionario conserva el borrador en memoria. Cambiar una respuesta puede invalidar
-otras y la revisión lo señala. Quitar una carrera o marca elimina sus datos ocultos.
-Cambiar disponibilidad retira una preferencia de día largo incompatible.
+`stepsFor()` separa dos familias de interfaz:
 
-## Contrato de integración preparado, todavía sin consumidor
+- Corredor habitual: objetivo/distancia cuando corresponde, evento opcional,
+  unidades, nivel declarado, una referencia actual opcional, volumen actual,
+  disponibilidad, preferencia de día largo e inicio/horizonte.
+- Iniciación/regreso (inspiración Foundation): actividad y frecuencia inicial,
+  meses sin correr en regreso, disponibilidad e inicio/horizonte. No pide marca.
 
-`toHandoff()` produce un borrador versionado, no un `WeeklyInput` directamente
-aceptable ni una autorización de pago. Incluye:
+Si hay carrera elegida, su fecha se conserva como tal. Sin carrera elegida se
+pregunta duración del programa. Al cambiar respuestas se retiran datos de ramas
+ocultas; editar disponibilidad revisa la preferencia de día largo.
 
-| Dato web | Correspondencia prevista en la app |
-| --- | --- |
-| `configuration` | Campos de `GoalConfiguration`; sin referencias/IDs inventados |
-| `availability` | `availableMinutes`, `dayLimitMinutes` de `WeeklyInput` |
-| `confirmations` | `adult`, `noSymptoms`, `noPain` |
-| `interruptionDays` | Interrupción actual, en días |
-| `history` | Cuatro `HistoryWeek` con estado y magnitudes declaradas |
-| `recentRace` | Una `RecentRace` declarada; no un tiempo objetivo |
+La fase 13 del análisis estático Runna 8.57.0 respalda los tipos de datos,
+la navegación condicional y disponibilidad suficiente. No acredita el orden exacto,
+texto español, todas las opciones ni límites de estos selectores. Los títulos,
+orden, opciones y rangos concretos de esta maqueta son propuestas de KipZone.
+No se mezclan V1, V2 y Foundation como una única secuencia comprobada, ni se
+presenta el cálculo deportivo de Runna como recuperado.
 
-El objetivo web adicional `startRunning` no tiene enum equivalente: se exporta
-como `null` en configuración y su resultado es fuera de alcance. No se degrada
-silenciosamente a un programa soportado. Los datos opcionales ausentes son `null`.
+Respecto a la versión anterior se retiran del recorrido los filtros del motor Dev,
+las confirmaciones universales de salud/edad, el historial de cuatro semanas,
+la disponibilidad por minutos, la exportación JSON y la evaluación de compatibilidad.
+Se podrán definir los datos adicionales al conectar con la app, por indicación
+del propietario. Los objetivos de principiantes, constancia y retorno se pueden
+recorrer completos en la maqueta aunque no tengan generador deportivo disponible.
 
-Para integrarlo habrá que verificar el esquema y todas las respuestas en un
-servicio confiable, asociar el borrador a la cuenta verificada, construir la semana
-futura y las referencias reales de intensidad, invocar el motor existente y
-conservar una identidad estable para reintentos. Una redirección a la tienda no
-transporta estas respuestas. No aceptar el resultado del navegador como elegibilidad
-final ni modificar `users.plan` desde el cliente.
+## Mensajes intermedios futuros
 
-## Comprobaciones preliminares, no segundo motor
+`EDITORIAL_SCREENS` está vacío. Acepta pantallas `{id, after, title, body}` cuando
+el propietario elija la redacción y el punto de inserción. El renderizador y la
+navegación están preparados; no se añadieron testimonios, cifras ni promesas.
+Las láminas nuevas aportadas por el propietario son contexto para esa futura
+redacción, no pantallas ya incorporadas ni pruebas de resultados.
 
-`assessDraft()` distingue incompleto, historial desactualizado, fuera de alcance
-inicial y listo para revisión del generador. Comprueba solo algunos requisitos
-necesarios: objetivo/experiencia, confirmaciones, integridad del formulario,
-cuatro semanas conocidas, medianas 240–360 minutos/≥3 días, interrupción de dos
-semanas, variación del historial y posibilidad preliminar de al menos tres salidas.
+## Datos locales
 
-No calcula dosis, horarios, reducciones, ritmos ni compatibilidad deportiva final.
-No comprueba todas las reglas del motor (distribución, presupuesto mínimo tras
-reducciones, continuidad, contradicciones de interrupción o separación entre días
-de calidad, por ejemplo). La UI lo comunica como resultado inicial pendiente de
-validación. `requiresEngineValidation: true` y `planGenerated: false` siempre.
+Respuestas en memoria; guardar siete días en el navegador es opcional.
+Esquema local 2, independiente de Firestore. No migra automáticamente el
+borrador de la versión 1: son cuestionarios distintos. No hay llamadas de red
+para enviar respuestas, Pixel ni autenticación. El cierre confirma las respuestas,
+no la creación de un plan. El resumen de revisión solo contiene pasos activos.
 
-Fuente de correspondencia: `kipzone-app`, rama `feat/zona-dorada-mvp`, archivos
-`training/model.dart`, `training/weekly_engine.dart`, `domain.dart` y
-`race_estimate.dart`, revisados el 27 de octubre de 2026. Antes de conectar hay que
-fijar una revisión concreta del contrato y volver a contrastarla. No se modificó
-el motor ni se activó la política Dev desde esta web.
-
-## Procedencia del recorrido
-
-La secuencia, la redacción, los iconos, el diseño y las rutas tempranas son
-decisiones propias de KipZone. No es una reproducción del orden de Runna.
-La fase 13 del análisis estático orienta la separación de objetivo, carga habitual,
-disponibilidad, referencia actual y revisión. No se mezclan V1, V2 y Foundation
-ni se atribuye a Runna el historial detallado de cuatro semanas.
-
-El historial, las confirmaciones actuales, el presupuesto de minutos y la fecha
-de la carrera realizada son adaptaciones para los contratos propios de KipZone.
-No hay referencias de rendimiento precargadas ni mejoras físicas prometidas.
-
-## Comprobaciones
+## Validación
 
 ```bash
 node --check plan/app.mjs
@@ -101,8 +77,7 @@ node --test plan/questionnaire.test.mjs
 git diff --check
 ```
 
-Probar además en un teléfono real y dentro del navegador de Facebook/Instagram
-antes de pautar anuncios: teclado, selector de fechas, scroll, descarga de JSON,
-regreso al anuncio y apertura de tiendas. Una previsualización de navegador no
-acredita esos comportamientos nativos. Una pantalla web vertical no es un archivo
-de video publicable en Stories/Reels; los anuncios se preparan por separado.
+Falta contrastar orden y redacción con capturas originales de Runna y probar
+navegadores nativos de Facebook/Instagram antes de lanzar campañas. La web es
+el destino del anuncio; sus pantallas no sustituyen los archivos creativos de
+Stories/Reels.
