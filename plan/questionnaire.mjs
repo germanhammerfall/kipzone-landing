@@ -6,9 +6,34 @@ export const weekdays = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sába
 export const goalLabels = {race:'Preparar una carrera',improve:'Mejorar mi marca',wellbeing:'Correr con constancia',startRunning:'Empezar a correr',returnToRunning:'Volver a correr'};
 export const experienceLabels = {beginner:'Principiante',intermediate:'Intermedio',advanced:'Avanzado',elite:'Élite'};
 export const distanceLabels = {'5':'5K','10':'10K','16.09344':'10 millas','21.0975':'Media maratón','42.195':'Maratón',ultra:'Ultra',custom:'Otra distancia'};
-// Slots for future editorial screens. Empty until the owner selects copy/placement.
-// Example shape: {id:'intro-method',after:'experience',title:'…',body:'…'}.
-export const EDITORIAL_SCREENS = [];
+// Approved short benefit screens. Questions and their relative order stay intact.
+export const EDITORIAL_SCREENS = [
+  {
+    id:'norwegian-achievements',after:'goal',eyebrow:'Inspiración noruega',
+    title:'Récords.\nMedallas.',
+    body:'Jakob Ingebrigtsen: oros olímpicos en 1500 y 5000 m. Récord mundial de 3000 m logrado en 2024.',
+    caption:'Una referencia del entrenamiento noruego.',
+    sources:[
+      {label:'World Athletics · logros deportivos',url:'https://worldathletics.org/athletes/_/14653717'},
+      {label:'World Athletics · oro en París 2024',url:'https://worldathletics.org/results/olympic-games/2024/the-xxxiii-olympic-games-7153115/men/5000-metres/final/result'},
+      {label:'Artículo sobre entrenamiento noruego (2023)',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC10000870/'}
+    ]
+  },
+  {
+    id:'norwegian-principles',after:['experience','exerciseLevel'],eyebrow:'Método noruego',
+    title:'Revoluciona tu forma\nde entrenar.',
+    body:'Controla la intensidad. Combina rodajes fáciles y trabajo de umbral. Deja espacio para recuperar.',
+    tags:['Intensidad','Umbral','Recuperación'],
+    sources:[{label:'Marius Bakken · principios del modelo',url:'https://www.mariusbakken.com/the-norwegian-model.html'}]
+  },
+  {
+    id:'norwegian-for-you',after:'availableDays',eyebrow:'Corredores recreativos',
+    title:'Tu tiempo.\nTu potencial.',
+    body:'Del alto rendimiento a tu rutina. Tu nivel, tus metas y tu disponibilidad como punto de partida.',
+    tags:['Tu nivel','Tus metas','Tu semana'],
+    sources:[{label:'Marius Bakken · adaptación a corredores recreativos',url:'https://extramilest.com/blog/the-norwegian-method-for-runners-the-extramilest-show-139/'}]
+  }
+];
 export function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function validDate(v){if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const d=new Date(`${v}T12:00:00`);return Number.isFinite(d.getTime())&&dateKey(d)===v;}
 export function formatDate(v){return validDate(v)?new Intl.DateTimeFormat('es-CL',{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${v}T12:00:00`)):'Sin fecha';}
@@ -47,7 +72,7 @@ export function stepsFor(draft,editorial=EDITORIAL_SCREENS){
   s.push({id:'startDate',group:'Tu calendario',title:'¿Cuándo quieres empezar?',type:'date'});
   if(!(a.goal==='race'&&a.hasRace==='yes'))s.push(number('weeks','Tu calendario','¿Cuántas semanas?',1,52,'semanas',{chips:[6,8,10,12,16]}));
   // A local preview sequence, not a universal V1/V2/Foundation Runna order.
-  return s.flatMap(step=>[step,...editorial.filter(e=>e.after===step.id).map(e=>({...e,type:'editorial',group:'KipZone'}))]);
+  return s.flatMap(step=>[step,...editorial.filter(e=>Array.isArray(e.after)?e.after.includes(step.id):e.after===step.id).map(e=>({...e,type:'editorial',group:'Sobre el método'}))]);
 }
 export function clockSeconds(text){
   if(typeof text!=='string'||!/^\d{1,3}:\d{2}(:\d{2})?$/.test(text))return null;

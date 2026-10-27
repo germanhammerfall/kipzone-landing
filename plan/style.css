@@ -710,3 +710,19 @@ body[data-theme=light] .fine {
     padding-top:10px;
   }
 }
+/* Brief editorial pauses; question numbering remains unchanged. */
+.editorial .back{min-height:36px;margin:4px 0 12px}
+.editorial .eyebrow{margin:0 0 14px}
+.editorial h1{white-space:pre-line;font-size:36px;line-height:1.04;letter-spacing:-1.2px;margin:0 0 18px}
+.editorial .editorial-copy{font-size:14px;line-height:1.55;color:#d1d9c5;max-width:34ch;margin:0 0 16px}
+.editorial .editorial-art{height:auto;min-height:125px;flex:1;margin:0 -24px;background-image:linear-gradient(var(--bg),transparent 25%,transparent 75%,var(--bg)),url('./assets/runners-anonymous-v2.webp');background-position:center,center 65%;background-size:cover,100% auto}
+.benefit-tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.benefit-tags span{font-size:10px;letter-spacing:.3px;color:var(--lime);border:1px solid #64751f;border-radius:20px;padding:7px 10px}
+.editorial .editorial-caption{font-size:11px;line-height:1.4;margin:6px 0;color:#b0bba1}
+.editorial-sources{font-size:10px;line-height:1.6;color:#9da98d;margin:0 0 6px}
+.editorial-sources summary{cursor:pointer;min-height:32px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}
+.editorial-sources summary:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.editorial-sources ul{padding:0 0 8px 16px;margin:0}
+.editorial-sources a{display:inline-block;padding:5px 0;text-underline-offset:3px}
+.editorial-action{position:sticky;bottom:0;background:var(--bg);padding:6px 0 0;margin-top:auto}
+@media(max-height:700px) and (max-width:649px){.editorial{padding-bottom:8px}.editorial .back{margin:0 0 8px;min-height:32px}.editorial .eyebrow{margin-bottom:10px}.editorial h1{font-size:32px;margin-bottom:14px}.editorial .editorial-copy{font-size:13px;margin-bottom:12px}.editorial .editorial-art{min-height:96px}.editorial .primary{min-height:52px}.benefit-tags span{font-size:9px;padding:6px 8px}}

@@ -15,7 +15,7 @@ function render(){
   document.body.dataset.theme=view==='welcome'||view==='result'||active?.type==='editorial'?'dark':'light';
   document.querySelector('#progress-region').hidden=i<0;
   const questions=steps.filter(s=>s.type!=='editorial');
-  const pos=questions.findIndex(s=>s.id===view);
+  const pos=active?.type==='editorial'?steps.slice(0,i+1).filter(s=>s.type!=='editorial').length-1:questions.findIndex(s=>s.id===view);
   document.querySelector('#section-name').textContent=active?.group||'';
   document.querySelector('#step-count').textContent=pos>=0?`${pos+1} / ${questions.length}`:'';
   document.querySelector('#progress').value=pos>=0?(pos+1)/questions.length*100:0;
@@ -44,7 +44,7 @@ function inputFor(s){
 function collect(s,form){const f=new FormData(form);draft.answers[s.id]=s.type==='days'?f.getAll('availableDays').map(Number).sort((a,b)=>a-b):f.get(s.id)||'';pruneAnswers(draft);save();}
 function question(s,i,steps){
   if(s.type==='editorial'){
-    app.innerHTML=`<section class="editorial">${back(steps[i-1]?.id||'welcome')}<div class="editorial-art" role="img" aria-label="Corredora y corredor anónimos de espaldas"></div><h1 tabindex="-1">${esc(s.title)}</h1>${s.body?`<p>${esc(s.body)}</p>`:''}<button class="primary" data-go="${steps[i+1]?.id||'review'}">Continuar →</button></section>`;return;
+    app.innerHTML=`<section class="editorial">${back(steps[i-1]?.id||'welcome')}<div class="eyebrow">${esc(s.eyebrow||'KipZone')}</div><h1 tabindex="-1">${esc(s.title)}</h1>${s.body?`<p class="editorial-copy">${esc(s.body)}</p>`:''}${s.tags?`<div class="benefit-tags">${s.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}<div class="editorial-art" role="img" aria-label="Corredora y corredor anónimos de espaldas"></div>${s.caption?`<p class="editorial-caption">${esc(s.caption)}</p>`:''}${s.sources?.length?`<details class="editorial-sources"><summary>Ver fuentes</summary><ul>${s.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.label)}</a></li>`).join('')}</ul></details>`:''}<div class="editorial-action"><button class="primary" data-go="${steps[i+1]?.id||'review'}">Continuar <span aria-hidden="true">→</span></button></div></section>`;return;
   }
   const art=['experience','exerciseLevel'].includes(s.id)?'<div class="visual-strip" role="img" aria-label="Una corredora y un corredor de espaldas"></div>':'';
   app.innerHTML=`<section class="question">${back(editing?'review':steps[i-1]?.id||'welcome')}${art}<div class="eyebrow">${esc(s.group)}</div><h1 tabindex="-1">${esc(s.title)}</h1>${s.help?`<p class="helper">${esc(s.help)}</p>`:''}<form novalidate>${inputFor(s)}${next(editing?'Guardar cambio':'Continuar')}${s.optional?`<button type="button" class="text-button skip" id="skip">${esc(s.skipLabel||'Omitir')}</button>`:''}<p class="fine" id="storage-status" role="status"></p></form></section>`;

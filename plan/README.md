@@ -11,7 +11,7 @@ compatibilidad deportiva, no cobra ni ofrece resultados físicos.
 - Híbrido: portada/cierre negros con fotografía; preguntas claras sobre blanco cálido.
 - Amarillo lima `#d4f500`, negro `#0a0d09`, blanco cálido `#f4f5ef`.
 - Corredora y corredor anónimos, de espaldas, con presencia equivalente.
-- Preguntas breves, sin párrafos promocionales entre pantallas.
+- Preguntas breves; tres pausas editoriales separadas de los formularios.
 - Botones grandes, selección única/múltiple, números con accesos rápidos,
   fechas, tiempo, campo de nombre opcional y revisión editable.
 - Formato móvil vertical, con scroll cuando hace falta y adaptación a pantallas cortas.
@@ -52,13 +52,52 @@ Se podrán definir los datos adicionales al conectar con la app, por indicación
 del propietario. Los objetivos de principiantes, constancia y retorno se pueden
 recorrer completos en la maqueta aunque no tengan generador deportivo disponible.
 
-## Mensajes intermedios futuros
+## Mensajes intermedios aprobados
 
-`EDITORIAL_SCREENS` está vacío. Acepta pantallas `{id, after, title, body}` cuando
-el propietario elija la redacción y el punto de inserción. El renderizador y la
-navegación están preparados; no se añadieron testimonios, cifras ni promesas.
-Las láminas nuevas aportadas por el propietario son contexto para esa futura
-redacción, no pantallas ya incorporadas ni pruebas de resultados.
+Se añaden tres pausas; no cambian preguntas, opciones ni orden relativo:
+
+| Después de | Mensaje | Objetivo |
+| --- | --- | --- |
+| Objetivo | Récords. Medallas. | Contexto deportivo noruego, con logros fechados y fuentes |
+| Nivel o actividad inicial | Revoluciona tu forma de entrenar. | Intensidad, umbral y recuperación |
+| Disponibilidad semanal | Tu tiempo. Tu potencial. | Enfoque recreativo, nivel/metas/agenda |
+
+El número de preguntas y el progreso no cuentan las pausas como respuestas.
+Las pausas no escriben campos, no solicitan datos y no aparecen en la revisión.
+Volver/continuar recorren la misma secuencia. Editar una respuesta desde la revisión
+regresa al resumen, sin obligar a volver a ver el mensaje promocional.
+
+`EDITORIAL_SCREENS` permite inserciones por `after` de una pregunta o una lista de
+alternativas. La pausa de principios aparece una sola vez: tras `experience` o
+`exerciseLevel`, según la rama. Se mantienen corredores anónimos de ambos géneros.
+
+### Criterio de copy y fuentes
+
+Fuente de tono: los tres flyers proporcionados por el propietario. Se retoman
+aprovechar el tiempo, intensidad controlada, potencial y adaptación personal.
+No se copian garantías de ausencia de lesiones, resultados en tres meses o
+récord personal asegurado. «Revoluciona» es una invitación editorial, no el
+resultado de un ensayo comparativo ni un aval clínico.
+
+- World Athletics: perfil de Jakob Ingebrigtsen, récord de 3000 m logrado en 2024,
+  y oros olímpicos en 1500 y 5000 m. Son logros del atleta, no resultados de
+  usuarios de KipZone ni prueba de causalidad exclusiva de un método:
+  https://worldathletics.org/athletes/_/14653717
+  https://worldathletics.org/results/olympic-games/2024/the-xxxiii-olympic-games-7153115/men/5000-metres/final/result
+- Casado et al. (2023), descripción del modelo de intervalos guiados por lactato
+  y su utilización en corredores de élite, incluidos los Ingebrigtsen:
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC10000870/
+- Marius Bakken, historia y principios del modelo; fuente del autor, de carácter
+  descriptivo/empírico, no una garantía individual:
+  https://www.mariusbakken.com/the-norwegian-model.html
+- Entrevista a Bakken en The Extramilest Show #139 (13 de octubre de 2026):
+  adaptación a corredores recreativos y equilibrio entre entrenamiento y vida diaria:
+  https://extramilest.com/blog/the-norwegian-method-for-runners-the-extramilest-show-139/
+
+Revisión de fuentes: 27 de octubre de 2026. No se encontró un conteo verificable
+para afirmar que «miles de personas lo están probando», ni un conteo de clientes
+KipZone. No se añade esa cifra ni testimonios inventados. Las fuentes quedan
+disponibles bajo «Ver fuentes», sin párrafos largos en las pantallas.
 
 ## Datos locales
 
