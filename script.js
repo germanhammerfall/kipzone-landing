@@ -124,3 +124,37 @@ motion.addEventListener('change', configureMotion);
 window.addEventListener('scroll', queueUpdate, { passive: true });
 window.addEventListener('resize', queueUpdate);
 configureMotion();
+
+const heroMap = document.querySelector('[data-hero-map]');
+const mapToggle = document.querySelector('[data-map-toggle]');
+
+if (heroMap && mapToggle) {
+  const hero = heroMap.closest('.hero');
+  let pausedByUser = false;
+
+  function syncMapPlayback() {
+    if (motion.matches || pausedByUser) {
+      heroMap.pause();
+      return;
+    }
+    if (!heroMap.hasAttribute('src')) heroMap.src = heroMap.dataset.src;
+    heroMap.play().catch(() => {
+      mapToggle.hidden = true;
+    });
+  }
+
+  heroMap.addEventListener('playing', () => {
+    hero.classList.add('map-playing');
+    mapToggle.hidden = false;
+    mapToggle.textContent = 'Pausar mapa';
+  });
+  heroMap.addEventListener('pause', () => {
+    mapToggle.textContent = 'Reproducir mapa';
+  });
+  mapToggle.addEventListener('click', () => {
+    pausedByUser = !heroMap.paused;
+    syncMapPlayback();
+  });
+  motion.addEventListener('change', syncMapPlayback);
+  syncMapPlayback();
+}

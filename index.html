@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,900&amp;family=DM+Sans:wght@400..800&display=swap">
-  <link rel="stylesheet" href="style.css?v=street-run-2">
-  <script src="script.js?v=street-run-2" defer></script>
+  <link rel="stylesheet" href="style.css?v=street-run-3">
+  <script src="script.js?v=street-run-3" defer></script>
 </head>
 <body>
   <svg class="icon-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -33,25 +33,27 @@
         <a class="nav-section" href="#captura">Territorios</a>
         <a class="nav-section" href="#entrena">Entrenamiento</a>
         <a href="/organizadores/">Organizadores</a>
-        <a class="nav-download" href="#descargar">Descargar</a>
       </nav>
+      <div class="store-links topbar-downloads">
+        <a class="button primary" href="https://apps.apple.com/app/id6805294126" aria-label="Descargar KipZone en iOS, App Store">
+          <svg class="store-icon" aria-hidden="true"><use href="#apple"/></svg><span><small>Descargar en</small><b>App Store</b></span>
+        </a>
+        <a class="button secondary" href="https://play.google.com/store/apps/details?id=com.revive.redsocial" aria-label="Descargar KipZone en Android, Google Play">
+          <svg class="store-icon" aria-hidden="true"><use href="#android"/></svg><span><small>Descargar en</small><b>Google Play</b></span>
+        </a>
+      </div>
     </div>
   </header>
 
   <main id="contenido">
     <section class="hero" id="inicio" data-scroll-scene aria-labelledby="hero-title">
+      <video class="hero-map" data-hero-map data-src="assets/hero-map.mp4"
+        muted loop playsinline preload="none" aria-hidden="true"></video>
+      <button class="map-toggle" type="button" data-map-toggle hidden>Pausar mapa</button>
       <div class="wrap hero-layout">
         <div class="hero-copy">
           <h1 id="hero-title">Conquista<br> tu ciudad<br> <em>corriendo</em></h1>
           <p>Captura territorios. Supera tu récord personal. Conecta con otros corredores.</p>
-          <div class="store-links">
-            <a class="button primary" href="https://apps.apple.com/app/id6805294126" aria-label="Descargar KipZone en iOS, App Store">
-              <svg class="store-icon" aria-hidden="true"><use href="#apple"/></svg><span><small>Descargar en</small><b>iOS</b></span>
-            </a>
-            <a class="button secondary" href="https://play.google.com/store/apps/details?id=com.revive.redsocial" aria-label="Descargar KipZone en Android, Google Play">
-              <svg class="store-icon" aria-hidden="true"><use href="#android"/></svg><span><small>Descargar en</small><b>Android</b></span>
-            </a>
-          </div>
         </div>
         <div class="hero-art">
           <img class="collage" src="assets/street-run-collage.webp" width="620" height="930" alt="">
@@ -160,10 +162,10 @@
         <h2 id="download-title">Descarga KipZone</h2>
         <div class="store-links">
           <a class="button primary" href="https://apps.apple.com/app/id6805294126" aria-label="Descargar KipZone en iOS, App Store">
-            <svg class="store-icon" aria-hidden="true"><use href="#apple"/></svg><span><small>Descargar en</small><b>iOS</b></span>
+            <svg class="store-icon" aria-hidden="true"><use href="#apple"/></svg><span><small>Descargar en</small><b>App Store</b></span>
           </a>
           <a class="button secondary" href="https://play.google.com/store/apps/details?id=com.revive.redsocial" aria-label="Descargar KipZone en Android, Google Play">
-            <svg class="store-icon" aria-hidden="true"><use href="#android"/></svg><span><small>Descargar en</small><b>Android</b></span>
+            <svg class="store-icon" aria-hidden="true"><use href="#android"/></svg><span><small>Descargar en</small><b>Google Play</b></span>
           </a>
         </div>
       </div>
