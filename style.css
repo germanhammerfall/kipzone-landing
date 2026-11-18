@@ -231,8 +231,8 @@ h3 { font-size: 1.65rem; }
 .scroll-motion .hero-phone { transform: translateY(calc(var(--scroll, 0) * 36px)); }
 .collage {
   position: absolute;
-  inset: auto 3% 12% auto;
-  width: min(46%, 200px);
+  inset: auto 2% 10% auto;
+  width: min(51%, 226px);
   transform: translateY(calc(var(--scroll, 0) * -52px)) rotate(calc(9deg + var(--scroll, 0) * 8deg));
   border: 3px solid #0c0d09;
   border-radius: 7px;
@@ -460,7 +460,7 @@ h3 { font-size: 1.65rem; }
   .hero h1 { font-size: clamp(5.15rem, 10.4vw, 9rem); }
   .hero-art { align-self: end; width: 100%; padding-top: 0; }
   .hero-phone { width: min(64%, 286px); margin-right: 18%; }
-  .collage { inset: auto 2% 13% auto; width: min(49%, 238px); }
+  .collage { inset: auto 1% 11% auto; width: min(55%, 272px); }
   .capture-layout, .training-layout { grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr); }
   .capture-extras { grid-template-columns: 1fr 1fr; }
   .has-motion .territory-phone { width: min(260px, calc((100svh - 120px) * .46)); }
