@@ -53,15 +53,32 @@ h3 { font-size: 1.65rem; }
   background: #090a09;
   border-bottom: 3px solid #4c502d;
 }
-.topbar { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-.brand img { width: clamp(92px, 15vw, 132px); }
-.topbar nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: .4rem 1.25rem; }
+.topbar { min-height: 82px; display: flex; align-items: center; gap: .5rem 1.15rem; padding-block: .55rem; }
+.brand { flex: 0 1 auto; min-width: 0; }
+.brand img { width: clamp(108px, 26vw, 184px); }
+.topbar .section-nav { display: none; margin-left: auto; gap: 1.25rem; }
 .topbar nav a, .site-footer a { font-size: .88rem; font-weight: 700; text-decoration: none; }
-.topbar nav a:hover, .site-footer a:hover { color: var(--lime); }
-.nav-section { display: none; }
-.topbar .store-links { margin: 0; }
-.topbar nav { margin-left: auto; }
-.topbar-downloads .button { min-height: 44px; }
+.topbar .section-nav a:hover, .site-footer a:hover { color: var(--lime); }
+.zone-switch {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid #4b5138;
+  border-radius: 999px;
+  background-color: #171b12;
+}
+.zone-switch a {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  padding-inline: .52rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.topbar .zone-switch a { font-size: clamp(.73rem, 2vw, .88rem); }
+.zone-switch a[aria-current="page"] { background-color: var(--lime); color: #111508; }
+.zone-switch a:not([aria-current]):hover { color: var(--lime); background-color: #252c19; }
 
 .hero {
   position: relative;
@@ -405,7 +422,6 @@ h3 { font-size: 1.65rem; }
 .site-footer nav { display: flex; flex-wrap: wrap; gap: .55rem 1rem; }
 
 @media (min-width: 760px) {
-  .nav-section { display: inline; }
   .hero-layout { grid-template-columns: 1fr .92fr; align-items: center; min-height: 600px; padding-block: 2rem; }
   .hero-copy { padding-block: 1.5rem 2.6rem; }
   .hero h1 { font-size: clamp(5.15rem, 10.4vw, 9rem); }
@@ -443,11 +459,14 @@ h3 { font-size: 1.65rem; }
 }
 
 @media (max-width: 900px) {
-  .topbar { display: grid; grid-template-columns: auto 1fr; padding-block: .7rem; gap: .6rem; }
-  .topbar-downloads { grid-column: 1 / -1; }
+  .topbar { justify-content: space-between; }
   .hero::after { background: linear-gradient(180deg, #111307eb, #15170969 63%, #090a09e5); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hero-map, .map-toggle { display: none; }
+}
+
+@media (min-width: 901px) {
+  .topbar .section-nav { display: flex; }
 }
