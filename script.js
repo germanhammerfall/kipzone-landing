@@ -1,5 +1,7 @@
 const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const scenes = Array.from(document.querySelectorAll('[data-scroll-scene]'));
+const trainingCopy = document.querySelector('.training-copy');
+const trainingProfile = document.querySelector('.session-profile');
 const territory = document.querySelector('[data-territory]');
 const canvas = territory?.querySelector('canvas');
 const context = canvas?.getContext('2d');
@@ -44,10 +46,21 @@ function updateScroll() {
 
   for (const scene of scenes) {
     const bounds = scene.getBoundingClientRect();
-    const progress = scene.id === 'inicio'
-      ? clampProgress(-bounds.top / bounds.height)
-      : clampProgress((window.innerHeight - bounds.top) / (window.innerHeight * .85));
+    const progress = clampProgress(-bounds.top / bounds.height);
     scene.style.setProperty('--scroll', progress.toFixed(3));
+  }
+
+  if (trainingCopy && trainingProfile) {
+    const viewport = window.innerHeight;
+    const copyTop = trainingCopy.getBoundingClientRect().top;
+    const chartTop = trainingProfile.getBoundingClientRect().top;
+    const copyProgress = clampProgress((viewport * .92 - copyTop) / (viewport * .38));
+    const chartProgress = Math.min(
+      clampProgress((copyProgress - .92) / .08),
+      clampProgress((viewport * .76 - chartTop) / (viewport * .34))
+    );
+    trainingCopy.style.setProperty('--copy-progress', copyProgress.toFixed(3));
+    trainingProfile.style.setProperty('--chart-progress', chartProgress.toFixed(3));
   }
 
   if (context && territory.classList.contains('has-motion')) {
