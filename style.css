@@ -257,9 +257,6 @@ h3 { font-size: 1.65rem; }
 }
 .mission h3 { color: var(--lime); }
 .mission p { margin-top: .45rem; }
-.watch-info { margin-top: 1rem; }
-.watch-info summary { width: fit-content; padding-block: .45rem; cursor: pointer; font-weight: 700; }
-.watch-info p { margin-top: .6rem; color: var(--muted); font-size: .94rem; }
 
 /* Only the visual walkthrough pins during scroll. The copy below stays in flow. */
 .capture {
@@ -319,7 +316,7 @@ h3 { font-size: 1.65rem; }
   gap: .35rem;
   margin: 1.25rem 0 0;
   padding: 0;
-  list-style: none;
+  list-style: decimal inside;
 }
 .route-steps li {
   padding: .32rem .5rem;
@@ -338,7 +335,6 @@ h3 { font-size: 1.65rem; }
   color: var(--muted);
 }
 .capture-extras .mission { margin: 0; color: var(--white); }
-.capture-extras .watch-info { margin-top: .1rem; }
 
 .training {
   border-block: 2px solid #735329;
@@ -359,9 +355,8 @@ h3 { font-size: 1.65rem; }
   font: italic 900 1.2rem/1 var(--display);
   text-transform: uppercase;
 }
-.training-visual { display: flex; align-items: center; gap: clamp(.7rem, 2vw, 1.5rem); min-width: 0; }
+.training-visual { display: grid; gap: 1rem; min-width: 0; }
 .session {
-  flex: 1;
   min-width: 0;
   padding: clamp(.8rem, 3vw, 1.7rem);
   border: 3px solid #86632d;
@@ -469,4 +464,15 @@ h3 { font-size: 1.65rem; }
 
 @media (min-width: 901px) {
   .topbar .section-nav { display: flex; }
+}
+
+.capture-copy h2 { font-size: clamp(2.45rem, 5.7vw, 4.75rem); }
+.session-goal { margin-top: .85rem; }
+.watch-copy { color: var(--muted); font-size: .94rem; }
+@media (max-width: 759px) {
+  .has-motion .capture-copy h2 { font-size: clamp(1.95rem, 7vw, 3.15rem); }
+  .has-motion .territory-phone { width: min(50vw, 210px, calc((100svh - 300px) * .46)); }
+}
+@media (max-height: 450px) {
+  .has-motion .territory-phone { width: min(45vw, 160px); }
 }
