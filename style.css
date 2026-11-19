@@ -395,6 +395,7 @@ h3 { font-size: 1.65rem; }
 .social .secondary { background-color: #10130a; }
 
 .icon-symbols { position: absolute; width: 0; height: 0; overflow: hidden; }
+.instagram-icon { display: block; width: 1.25rem; height: 1.25rem; flex: 0 0 auto; }
 .store-icon { width: 23px; height: 23px; fill: currentColor; }
 .store-links .button {
   min-width: 120px;
@@ -433,8 +434,18 @@ h3 { font-size: 1.65rem; }
 .closing-layout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
 .closing h2 { font-size: clamp(2.35rem, 5vw, 4rem); }
 .closing .store-links { margin: 0; }
-.site-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .65rem 1.5rem; padding-block: 1.4rem; color: var(--muted); }
-.site-footer nav { display: flex; flex-wrap: wrap; gap: .55rem 1rem; }
+.site-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .65rem 1.5rem; padding-block: 1.4rem; color: var(--muted); }
+.site-footer nav { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem 1rem; }
+.footer-instagram {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #4b5138;
+  border-radius: 50%;
+}
+.footer-instagram:hover { border-color: var(--lime); }
+.footer-instagram .instagram-icon { width: 1rem; height: 1rem; }
 
 @media (min-width: 760px) {
   .hero-layout { grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr); gap: clamp(1rem, 3vw, 2.75rem); align-items: center; min-height: 550px; padding-block: 2rem; }
