@@ -249,7 +249,7 @@ h3 { font-size: 1.65rem; }
 
 
 .section { padding-block: clamp(3.5rem, 8vw, 7rem); }
-.capture-layout, .training-layout { display: grid; align-items: center; gap: clamp(1.75rem, 5vw, 4.5rem); }
+.capture-layout { display: grid; align-items: center; gap: clamp(1.75rem, 5vw, 4.5rem); }
 .capture-copy > p, .training-copy > p:not(.pro-label), .social-copy p {
   max-width: 41ch;
   margin-top: 1rem;
@@ -363,8 +363,13 @@ h3 { font-size: 1.65rem; }
   font: italic 900 1.2rem/1 var(--display);
   text-transform: uppercase;
 }
-.training-visual { display: grid; gap: 1rem; min-width: 0; }
-.training-finish {
+.training-layout {
+  width: calc(100% - 2 * clamp(1.25rem, 4vw, 4rem));
+  text-align: center;
+}
+.training-copy > p:not(.pro-label) { max-width: none; }
+.training-visual { margin-top: clamp(1.5rem, 4vw, 3rem); display: grid; gap: 1rem; min-width: 0; }
+.training-banner {
   width: 100%;
   height: auto;
   border: 2px solid #86632d;
@@ -418,11 +423,8 @@ h3 { font-size: 1.65rem; }
 .training-copy h2 { --copy-offset: .08; }
 .training-copy .training-promise { --copy-offset: .24; }
 .training-copy p:nth-of-type(3) { --copy-offset: .37; }
-.training-copy p:nth-of-type(4) { --copy-offset: .51; }
 
-.training-copy .training-cta { --copy-offset: .59; }
-.scroll-motion .training-copy .training-cta:focus-visible { opacity: 1; translate: none; }
-.scroll-motion .training-finish {
+.scroll-motion .training-banner {
   opacity: calc(.76 + .24 * var(--image-progress, 1));
   translate: 0 calc((1 - var(--image-progress, 1)) * 12px);
 }
@@ -439,7 +441,7 @@ h3 { font-size: 1.65rem; }
   .hero-copy { padding-block: 1.5rem 2.6rem; }
   .hero h1 { font-size: clamp(3.6rem, 7.55vw, 6.8rem); }
   .hero-art { justify-self: end; padding-top: 0; }
-  .capture-layout, .training-layout { grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr); }
+  .capture-layout { grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr); }
   .capture-extras { grid-template-columns: 1fr 1fr; }
   .has-motion .territory-phone { width: min(260px, calc((100svh - 120px) * .46)); }
 }
